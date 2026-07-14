@@ -57,6 +57,11 @@ function zenCredit(tag = '') {
   return `<footer class="zen-footer"><em>DESIGN BY ZEN</em>${tag ? ` · ${tag}` : ' · 食旅集'}</footer>`;
 }
 
+/** 统一返回按钮结构：箭头固定槽位，保证左对齐一致 */
+function backBtn(id, label) {
+  return `<button type="button" class="back-link" id="${id}"><span class="back-link-ico" aria-hidden="true">←</span><span class="back-link-txt">${escapeHtml(label)}</span></button>`;
+}
+
 const ASSET_BASE = import.meta.env.BASE_URL || '/';
 function asset(path) {
   return `${ASSET_BASE}${String(path).replace(/^\//, '')}`;
@@ -946,7 +951,7 @@ function renderMenu() {
 
   return `
     <div class="menu-wrap anim-page">
-      <button type="button" class="back-link" id="btn-back-capture">← 再拍一页</button>
+      ${backBtn('btn-back-capture', '返回')}
       <div class="menu-header">
         <input
           type="text"
@@ -959,7 +964,7 @@ function renderMenu() {
         />
         <div class="menu-meta-row">
           <p class="menu-meta-left">${cats.length} 个分类 · ${dishCount} 道菜品</p>
-          ${fxRight ? `<p class="menu-meta-right">${escapeHtml(fxRight)}</p>` : ''}
+          ${fxRight ? `<p class="menu-meta-right"><span class="menu-fx-tag">${escapeHtml(fxRight)}</span></p>` : ''}
         </div>
       </div>
       <div class="cat-scroll" id="cat-scroll">
@@ -1172,7 +1177,7 @@ function renderOrder() {
 
   return `
     <div class="order-page">
-      <button type="button" class="back-link" id="btn-back-menu">← 回到菜单</button>
+      ${backBtn('btn-back-menu', '返回')}
       <div class="order-head">
         <h2>核对清单</h2>
       </div>
@@ -1284,17 +1289,14 @@ function renderReceipt() {
 
   return `
     <div class="receipt-page anim-page">
-      <button type="button" class="back-link" id="btn-receipt-hist">← 旅记</button>
+      ${backBtn('btn-receipt-hist', '返回')}
       <div class="shopping-list bill-sheet" id="shopping-list-card">
         <div class="bill-perforation" aria-hidden="true"></div>
         <div class="sl-head">
-          <p class="sl-kicker">点单卡 · FOR THE TABLE</p>
+          <p class="sl-kicker">TABLE CARD</p>
           <h2 class="sl-title">${escapeHtml(r.restaurant_name)}</h2>
-          <p class="sl-sub">${formatTime(r.createdAt)} · 编号 ${String(r.createdAt).slice(-6)}</p>
+          <p class="sl-sub">${formatTime(r.createdAt)}</p>
           <p class="sl-hint">请按下列菜品为客人准备</p>
-        </div>
-        <div class="bill-table-head" aria-hidden="true">
-          <span>#</span><span>ITEM</span><span>QTY</span><span>AMT</span>
         </div>
         <ol class="sl-rows">
           ${r.items
@@ -1302,19 +1304,14 @@ function renderReceipt() {
               idx += 1;
               const lineOrig =
                 it.price != null ? formatMoney(Number(it.price) * it.qty, cur) : '—';
-              const lineCny =
-                it.price_cny != null
-                  ? `约 ¥${(Number(it.price_cny) * it.qty).toFixed(2)}`
-                  : '';
               return `
               <li class="sl-row">
                 <span class="sl-no">${String(idx).padStart(2, '0')}</span>
                 <div class="sl-body">
                   <p class="sl-name-orig">${escapeHtml(it.name_original)}</p>
                   <p class="sl-name-zh">${escapeHtml(it.name_zh)}</p>
-                  ${lineCny ? `<p class="sl-line-cny">${lineCny}</p>` : ''}
                 </div>
-                <div class="sl-qty">${it.qty}</div>
+                <div class="sl-qty">×${it.qty}</div>
                 <div class="sl-price">
                   <span class="sl-price-orig">${lineOrig}</span>
                 </div>
@@ -1324,8 +1321,7 @@ function renderReceipt() {
         </ol>
         <div class="sl-total">
           <div class="sl-total-left">
-            <span class="sl-total-label">TOTAL</span>
-            <span class="sl-total-count">${r.count} items · ${cur}</span>
+            <span class="sl-total-label">合计 · ${r.count} 份</span>
             ${
               r.total_cny > 0
                 ? `<span class="sl-total-cny">约 ¥${Number(r.total_cny).toFixed(2)}</span>`
@@ -1334,14 +1330,7 @@ function renderReceipt() {
           </div>
           <div class="sl-total-orig">${formatMoney(r.total_orig, cur)}</div>
         </div>
-        <div class="bill-sign">
-          <span>Server · ___________</span>
-          <span>Guest · ___________</span>
-        </div>
-        <p class="sl-foot">
-          THANK YOU · DESIGN BY ZEN · 食旅集
-          <span class="sl-stamp">ORDER</span>
-        </p>
+        <p class="sl-foot">DESIGN BY ZEN · 食旅集</p>
         <div class="bill-perforation bottom" aria-hidden="true"></div>
       </div>
       <div class="order-actions receipt-actions">
@@ -1373,7 +1362,7 @@ function renderHistory() {
   const list = loadHistory();
   return `
     <div class="history-page">
-      <button type="button" class="back-link" id="btn-hist-back">← 返回</button>
+      ${backBtn('btn-hist-back', '返回')}
       <h2>点单旅记</h2>
       ${
         list.length
@@ -1437,7 +1426,7 @@ function renderHistoryDetail() {
   const cur = h.currency || 'USD';
   return `
     <div class="order-page">
-      <button type="button" class="back-link" id="btn-hdd-back">← 旅记目录</button>
+      ${backBtn('btn-hdd-back', '返回')}
       <div class="order-head">
         <h2>${escapeHtml(h.restaurant_name)}</h2>
         <p class="menu-meta" style="margin-top:8px">${formatTime(h.createdAt)}</p>

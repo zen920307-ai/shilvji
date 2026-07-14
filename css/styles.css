@@ -33,9 +33,9 @@
   --cart-h: 56px;
   --app-chrome-h: calc(88px + var(--safe-t));
   --analyze-h: 100px;
-  /* 彻底贴底：不使用 safe-area 垫高 */
   --pad-b: 0px;
-  --app-foot-h: 22px;
+  --app-foot-h: 18px;
+  --cart-bg: var(--bg);
   --font: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
   --serif: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -122,6 +122,7 @@ body {
   padding: 0;
   height: 100%;
   height: 100dvh;
+  height: -webkit-fill-available;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font);
@@ -129,6 +130,8 @@ body {
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
   overscroll-behavior: none;
+  /* 禁止系统底部安全区把内容顶上去 */
+  padding-bottom: 0 !important;
 }
 
 body {
@@ -169,6 +172,7 @@ body {
 #app {
   height: 100%;
   height: 100dvh;
+  height: -webkit-fill-available;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
@@ -177,6 +181,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   box-shadow: 0 0 0 1px var(--line);
+  padding-bottom: 0 !important;
 }
 
 /* ─── Top chrome · fixed outside scroll ─── */
@@ -219,24 +224,26 @@ body {
   display: none; /* 统一用 app-foot 固定底栏 */
 }
 
-/* 署名底栏：极矮；首页 / 点单页隐藏 */
+/* 署名底栏：极矮贴底，无 safe-area；首页 / 点单页隐藏 */
 .app-foot {
   flex-shrink: 0;
   height: var(--app-foot-h);
-  min-height: var(--app-foot-h);
+  min-height: 0;
+  max-height: var(--app-foot-h);
   display: flex;
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--line);
   background: var(--bg);
   font-family: var(--mono);
-  font-size: 0.5rem;
+  font-size: 0.48rem;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: var(--ink-faint);
   z-index: 40;
   line-height: 1;
-  padding: 0;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 .app-foot em {
@@ -247,7 +254,11 @@ body {
 body[data-view='capture'] .app-foot,
 body[data-view='menu'] .app-foot,
 body[data-view='loading'] .app-foot {
-  display: none;
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden;
+  border: none;
 }
 
 /* ─── Topbar ─── */
@@ -391,7 +402,7 @@ body[data-view='loading'] .app-foot {
 
 /* 首页底栏浮层：仅留最小内容空隙，禁止大块留白 */
 body[data-view='capture'] .main {
-  padding-bottom: 96px;
+  padding-bottom: 128px;
 }
 
 body[data-view='menu'] .main.has-cart {
@@ -862,7 +873,7 @@ body[data-view='menu'] .main.has-cart {
   border-radius: 50%;
 }
 
-/* Bottom analyze bar · 真正贴屏幕底 */
+/* Bottom analyze bar · 贴屏幕最底，按钮更高 */
 .analyze-wrap {
   position: fixed;
   left: 50%;
@@ -874,24 +885,35 @@ body[data-view='menu'] .main.has-cart {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px 10px;
-  /* 纯粹贴底，无 safe-area */
-  padding-bottom: 10px;
+  gap: 10px;
+  padding: 10px 12px 8px;
+  padding-bottom: 8px;
   background: var(--bg);
   border-top: 1px solid var(--line);
   box-shadow: none;
 }
 
+/* 用同色块把底栏以下区域也刷成页面色，消除割裂 */
+.analyze-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 80px;
+  background: var(--bg);
+  pointer-events: none;
+}
+
 .analyze-wrap .btn-primary {
   width: 100%;
-  min-height: 52px;
-  font-size: 0.9rem;
+  min-height: 56px;
+  font-size: 0.92rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 16px 16px;
 }
 
 .analyze-wrap .btn-primary .btn-ico {
@@ -902,8 +924,8 @@ body[data-view='menu'] .main.has-cart {
 
 .analyze-wrap .btn-soft {
   width: 100%;
-  min-height: 44px;
-  padding: 12px 14px;
+  min-height: 50px;
+  padding: 14px 14px;
   margin-bottom: 0;
 }
 
@@ -1164,14 +1186,15 @@ body[data-view='menu'] .main.has-cart {
   padding-bottom: 8px;
 }
 
-/* 全局统一返回：位置 / 左对齐一致 */
+/* 全局统一返回：固定左内边距 + 固定箭头槽，文字起点一致 */
 .back-link {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   width: 100%;
   box-sizing: border-box;
   margin: 0;
-  padding: 12px 16px 6px;
+  padding: 12px 16px 6px 16px;
   border: none;
   background: none;
   color: var(--ink-dim);
@@ -1183,6 +1206,23 @@ body[data-view='menu'] .main.has-cart {
   text-align: left;
   line-height: 1.4;
   -webkit-tap-highlight-color: transparent;
+  gap: 0;
+}
+
+.back-link-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 1.15em;
+  flex: 0 0 1.15em;
+  font-size: 1em;
+  line-height: 1;
+}
+
+.back-link-txt {
+  display: inline-block;
+  text-align: left;
+  min-width: 0;
 }
 
 .back-link:active {
@@ -1238,13 +1278,22 @@ body[data-view='menu'] .main.has-cart {
 .menu-meta-right {
   margin: 0;
   flex-shrink: 0;
-  max-width: 46%;
+  max-width: 48%;
   text-align: right;
+}
+
+.menu-fx-tag {
+  display: inline-block;
+  padding: 4px 9px;
   font-family: var(--mono);
-  font-size: 0.62rem;
-  color: var(--accent-deep);
+  font-size: 0.6rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
-  line-height: 1.4;
+  line-height: 1.35;
+  color: var(--accent-deep);
+  background: rgba(143, 145, 120, 0.14);
+  border: 1px solid rgba(143, 145, 120, 0.28);
+  white-space: nowrap;
 }
 
 .menu-kicker {
@@ -1584,7 +1633,7 @@ body[data-view='menu'] .main.has-cart {
   background: var(--bg-elev);
 }
 
-/* Cart · 底栏背景铺满至屏幕最底，不断开 */
+/* Cart · 与页面同色，并向下延伸刷满浏览器底边 */
 .cart-bar {
   position: fixed;
   left: 50%;
@@ -1595,11 +1644,22 @@ body[data-view='menu'] .main.has-cart {
   z-index: 50;
   margin: 0;
   padding: 0;
-  /* 整条区域同一底色，贴屏幕底 */
-  background: #faf7f0;
+  background: var(--cart-bg);
   border-top: 1px solid var(--line);
   pointer-events: none;
-  box-shadow: 0 -6px 20px rgba(44, 41, 36, 0.06);
+  box-shadow: none;
+}
+
+/* 向下延伸同色背景，盖住系统底边/页面割裂 */
+.cart-bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 120px;
+  background: var(--cart-bg);
+  pointer-events: none;
 }
 
 .cart-bar.hidden {
@@ -1614,10 +1674,12 @@ body[data-view='menu'] .main.has-cart {
   margin: 0;
   padding: 8px 10px 10px;
   gap: 8px;
-  background: #faf7f0;
+  background: var(--cart-bg);
   border: none;
   overflow: visible;
   box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
 .cart-info {
@@ -1907,35 +1969,34 @@ body[data-view='menu'] .main.has-cart {
 
 /* Receipt · 文艺点单卡 */
 .receipt-page {
-  padding: 0 16px 20px;
+  padding: 4px 16px 24px;
   background: var(--bg);
 }
 
 .shopping-list.bill-sheet {
-  /* 近白卡纸，与页面米灰拉开对比 */
-  --card-paper: #fffeff;
-  --card-ink: #26221c;
+  --card-paper: #fffcf8;
+  --card-ink: #2a2620;
   --card-muted: #7a746a;
-  --card-line: #e8e2d6;
+  --card-line: #ebe4d8;
   --card-accent: #6f725c;
   position: relative;
   margin: 0;
-  padding: 0;
-  border: 1px solid #d4cec0;
-  background:
-    linear-gradient(180deg, #ffffff 0%, #fffcf7 48%, #faf6ef 100%);
+  padding: 0 0 4px;
+  border: 1px solid rgba(200, 192, 176, 0.55);
+  background: var(--card-paper);
   color: var(--card-ink);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 12px 36px rgba(44, 41, 36, 0.08);
+  /* 极轻投影，与背景轻微分开 */
+  box-shadow: 0 4px 18px rgba(44, 41, 36, 0.045);
   overflow: hidden;
 }
 
 .shopping-list.bill-sheet::before {
   content: '';
   position: absolute;
-  inset: 14px;
-  border: 1px solid rgba(200, 192, 176, 0.45);
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, transparent 28%),
+    radial-gradient(ellipse at 50% 0%, rgba(143, 145, 120, 0.05), transparent 55%);
   pointer-events: none;
   z-index: 0;
 }
@@ -1947,27 +2008,25 @@ body[data-view='menu'] .main.has-cart {
 
 /* 齿孔装饰：贴合小票上下边 */
 .bill-perforation {
-  height: 22px;
+  height: 16px;
   margin: 0;
   background:
-    radial-gradient(circle at 12px 50%, var(--bg) 5px, transparent 5.5px) 0 0 / 24px 22px repeat-x,
-    linear-gradient(180deg, #f3eee6, #fffcf7);
-  border-bottom: 1px dashed var(--card-line);
-  opacity: 1;
+    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 16px repeat-x;
+  border-bottom: none;
+  opacity: 0.9;
 }
 
 .bill-perforation.bottom {
-  height: 22px;
+  height: 16px;
   margin: 0;
   border-bottom: none;
-  border-top: 1px dashed var(--card-line);
+  border-top: none;
   background:
-    radial-gradient(circle at 12px 50%, var(--bg) 5px, transparent 5.5px) 0 0 / 24px 22px repeat-x,
-    linear-gradient(0deg, #f3eee6, #fffcf7);
+    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 16px repeat-x;
 }
 
 .sl-head {
-  padding: 18px 18px 12px;
+  padding: 8px 22px 16px;
   text-align: center;
   border-bottom: 1px solid var(--card-line);
 }
@@ -1975,9 +2034,9 @@ body[data-view='menu'] .main.has-cart {
 .sl-kicker {
   margin: 0 0 10px;
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: 500;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   color: var(--card-accent);
 }
 
@@ -2025,13 +2084,13 @@ body[data-view='menu'] .main.has-cart {
 .sl-rows {
   list-style: none;
   margin: 0;
-  padding: 0 12px;
+  padding: 4px 18px 8px;
 }
 
 .sl-row {
   display: grid;
-  grid-template-columns: 28px 1fr 36px 64px;
-  gap: 6px;
+  grid-template-columns: 28px 1fr auto auto;
+  gap: 8px 10px;
   align-items: start;
   padding: 12px 4px;
   border-bottom: 1px dashed var(--card-line);
