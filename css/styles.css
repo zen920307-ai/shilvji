@@ -45,15 +45,17 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  height: 100dvh;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
-  overflow-x: hidden;
   background-color: var(--bg);
   background-image:
     linear-gradient(rgba(200, 255, 0, 0.03) 1px, transparent 1px),
@@ -61,23 +63,56 @@ body {
   background-size: 24px 24px;
 }
 
+/* ─── Scrollbar · 匹配酸绿硬边 ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) #141414;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0a0a;
+  border-left: 1px solid var(--line);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border: 2px solid #0a0a0a;
+  box-shadow: inset 0 0 0 1px rgba(15, 15, 15, 0.35);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #d8ff33;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #0a0a0a;
+}
+
 #app {
-  min-height: 100%;
+  height: 100%;
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   position: relative;
-  padding-bottom: calc(var(--cart-h) + var(--safe-b) + 16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--bg);
   border-left: var(--border-thin);
   border-right: var(--border-thin);
 }
 
-/* ─── Fixed chrome: green strip + topbar ─── */
+/* ─── 顶部完全固定：不在滚动流内，下滑不会带走 ─── */
 .app-chrome {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
+  position: relative;
   z-index: 50;
-  background: var(--bg);
+  background: #0a0a0a;
 }
 
 /* ─── DESIGN BY ZEN ─── */
@@ -212,10 +247,18 @@ body {
   color: var(--accent-ink);
 }
 
-/* ─── Main ─── */
+/* ─── Main · 唯一纵向滚动区 ─── */
 .main {
+  flex: 1;
+  min-height: 0;
   padding: 0;
+  padding-bottom: calc(var(--cart-h) + var(--safe-b) + 16px);
   background: var(--bg);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
 }
 
 /* ─── Hero / Home ─── */
@@ -707,7 +750,7 @@ body {
   width: 100%;
 }
 
-body[data-view='capture'] #app {
+body[data-view='capture'] .main {
   padding-bottom: calc(var(--analyze-h) + var(--safe-b) + 12px);
 }
 
@@ -1048,7 +1091,7 @@ body[data-view='capture'] #app {
   overflow-x: auto;
   scrollbar-width: none;
   position: sticky;
-  top: var(--app-chrome-h);
+  top: 0;
   z-index: 30;
   background: #0a0a0a;
   border-bottom: var(--border);
