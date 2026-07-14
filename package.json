@@ -1,0 +1,17 @@
+{
+  "name": "shilvji",
+  "version": "1.0.0",
+  "private": true,
+  "description": "食旅集 — 海外菜单拍照翻译点餐助手",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "dependencies": {
+    "tesseract.js": "^5.1.1"
+  }
+}
