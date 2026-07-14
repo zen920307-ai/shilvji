@@ -198,7 +198,7 @@ function updateCartBar() {
 
 // —— Capture photos ——
 function addFiles(fileList) {
-  const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'));
+  const files = Array.from(fileList || []).filter(isImageFile);
   if (!files.length) {
     toast('请选菜单照片');
     return;
@@ -404,9 +404,16 @@ function orderTotals(items) {
   return { totalCny, totalOrig, count };
 }
 
+function syncChromeHeight() {
+  const chrome = document.getElementById('app-chrome');
+  if (!chrome) return;
+  document.documentElement.style.setProperty('--app-chrome-h', `${chrome.offsetHeight}px`);
+}
+
 // —— Render ——
 function render() {
   main.onclick = null;
+  document.body.dataset.view = state.view;
   switch (state.view) {
     case 'capture':
       main.innerHTML = renderCapture();
@@ -418,6 +425,7 @@ function render() {
     case 'menu':
       main.innerHTML = renderMenu();
       bindMenu();
+      syncChromeHeight();
       break;
     case 'order':
       main.innerHTML = renderOrder();
@@ -441,10 +449,58 @@ function render() {
   updateCartBar();
 }
 
+/** 相册专用 accept：尽量避开系统「拍照 / 文件」入口 */
+const GALLERY_ACCEPT =
+  'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.jpg,.jpeg,.png,.webp,.heic,.heif,.gif';
+
+function isImageFile(file) {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  return /\.(jpe?g|png|webp|gif|heic|heif|bmp)$/i.test(file.name || '');
+}
+
+/** 直接打开相册/图片选择，不走「拍照 or 图库 or 文件」三选一 */
+async function openGalleryPicker() {
+  // 桌面 Chromium：系统文件选择器（无相机选项）
+  if (typeof window.showOpenFilePicker === 'function') {
+    try {
+      const handles = await window.showOpenFilePicker({
+        multiple: true,
+        excludeAcceptAllOption: true,
+        types: [
+          {
+            description: 'Images',
+            accept: {
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+              'image/webp': ['.webp'],
+              'image/heic': ['.heic', '.heif'],
+              'image/gif': ['.gif'],
+            },
+          },
+        ],
+      });
+      const files = await Promise.all(handles.map((h) => h.getFile()));
+      addFiles(files);
+      return;
+    } catch (err) {
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+      // 继续走 input 回退
+    }
+  }
+
+  const input = document.getElementById('input-gallery');
+  if (!input) return;
+  input.setAttribute('accept', GALLERY_ACCEPT);
+  input.removeAttribute('capture');
+  input.value = '';
+  input.click();
+}
+
 function renderCapture() {
   const n = state.photos.length;
   const marquee =
-    'TABLESIDE · TRANSLATE · ORDER · ABROAD MENU · NO MORE GUESSING · DESIGN BY ZEN · ';
+    '远方的菜单 · 近在眼前 · 把陌生的字读成乡音 · TABLESIDE POETRY · DESIGN BY ZEN · ';
   return `
     <section class="hero-card">
       <div class="hero-marquee" aria-hidden="true">
@@ -454,12 +510,12 @@ function renderCapture() {
       </div>
       <div class="hero-body">
         <p class="hero-kicker">
-          <span>// 不必再猜</span>
-          <span class="en">NO MORE GUESSING</span>
+          <span>// 异乡的纸页</span>
+          <span class="en">PAGES OF ELSEWHERE</span>
         </p>
-        <h2 class="hero-title">异乡菜单<em>读成乡音</em></h2>
-        <p class="hero-desc">拍下纸页上的字，让它变成你听得懂的菜名，再递给服务员一张清清楚楚的点单卡。</p>
-        <p class="hero-en-line"><b>Shoot</b> the page · <b>Read</b> the taste · <b>Pass</b> the card</p>
+        <h2 class="hero-title">把陌生菜名<em>读成乡音</em></h2>
+        <p class="hero-desc">一页菜单，半段旅程。镜头对准纸上的字，我们替你译出味道，再递一张清清楚楚的点单卡，给对面那个人。</p>
+        <p class="hero-en-line"><b>Lens</b> on the page · <b>Words</b> into taste · <b>Card</b> to the table</p>
       </div>
       <div class="capture-actions">
         <label class="btn-capture" data-en="CAM">
@@ -468,13 +524,13 @@ function renderCapture() {
           <span class="cap-sub">Capture now</span>
           <input id="input-camera" type="file" accept="image/*" capture="environment" multiple hidden />
         </label>
-        <label class="btn-capture" data-en="LIB">
+        <button type="button" class="btn-capture" data-en="LIB" id="btn-gallery">
           <span class="cap-icon">02 · ROLL</span>
           <span class="cap-label">从相册</span>
           <span class="cap-sub">From gallery</span>
-          <input id="input-gallery" type="file" accept="image/*" multiple hidden />
-        </label>
+        </button>
       </div>
+      <input id="input-gallery" type="file" accept="${GALLERY_ACCEPT}" multiple hidden />
     </section>
 
     <section class="photo-section">
@@ -500,19 +556,20 @@ function renderCapture() {
               还没有菜单照片<br/>整页入镜、字迹清楚，读得更准
             </div>`
       }
-      <div class="analyze-wrap">
-        <button type="button" class="btn-primary" id="btn-analyze" ${n ? '' : 'disabled'}>
-          开卷 · 读懂这页菜单
-        </button>
-        <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
-        ${
-          !state.settings.apiKey
-            ? `<span class="tip-chip">还差一把钥匙 · 点右上角设置密钥 <span class="en">/ SET API KEY</span></span>`
-            : `<span class="tip-chip">可连拍多页 · 读之前仍能删掉某一张 <span class="en">/ MULTI-PAGE OK</span></span>`
-        }
-      </div>
       ${zenCredit('旅人的菜单册')}
     </section>
+
+    <div class="analyze-wrap">
+      <button type="button" class="btn-primary" id="btn-analyze" ${n ? '' : 'disabled'}>
+        开卷 · 读懂这页菜单
+      </button>
+      <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
+      ${
+        !state.settings.apiKey
+          ? `<span class="tip-chip">还差一把钥匙 · 点右上角设置密钥 <span class="en">/ SET API KEY</span></span>`
+          : `<span class="tip-chip">可连拍多页 · 读之前仍能删掉某一张 <span class="en">/ MULTI-PAGE OK</span></span>`
+      }
+    </div>
   `;
 }
 
@@ -524,6 +581,10 @@ function bindCapture() {
   document.getElementById('input-gallery')?.addEventListener('change', (e) => {
     addFiles(e.target.files);
     e.target.value = '';
+  });
+  document.getElementById('btn-gallery')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openGalleryPicker();
   });
   document.getElementById('btn-clear-photos')?.addEventListener('click', () => {
     state.photos.forEach((p) => URL.revokeObjectURL(p.url));
@@ -786,6 +847,41 @@ function renderMenu() {
   `;
 }
 
+/** 切换分类：只更新列表与 active，保留 tab 横向滚动位置 */
+function switchCategory(index) {
+  const cats = state.menu?.categories || [];
+  if (!cats.length) return;
+  const i = Math.max(0, Math.min(Number(index) || 0, cats.length - 1));
+  if (i === state.activeCat) {
+    // 仍确保当前 tab 在可视区内（nearest，不会整条滚回开头）
+    document.querySelector(`.cat-chip[data-cat="${i}"]`)?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'nearest',
+      block: 'nearest',
+    });
+    return;
+  }
+  state.activeCat = i;
+  const cat = cats[i];
+
+  document.querySelectorAll('.cat-chip').forEach((btn) => {
+    const idx = Number(btn.getAttribute('data-cat'));
+    btn.classList.toggle('active', idx === i);
+  });
+
+  const list = document.getElementById('dish-list');
+  if (list) {
+    list.innerHTML = (cat?.items || []).map((d) => renderDishCard(d)).join('');
+  }
+
+  // inline: nearest —— 已在视野内则不动，被裁切时才微调
+  document.querySelector(`.cat-chip[data-cat="${i}"]`)?.scrollIntoView({
+    behavior: 'smooth',
+    inline: 'nearest',
+    block: 'nearest',
+  });
+}
+
 function bindMenu() {
   document.getElementById('btn-back-capture')?.addEventListener('click', () => {
     state.view = 'capture';
@@ -798,8 +894,7 @@ function bindMenu() {
     if (!(t instanceof Element)) return;
     const cat = t.closest('[data-cat]');
     if (cat) {
-      state.activeCat = Number(cat.getAttribute('data-cat'));
-      render();
+      switchCategory(cat.getAttribute('data-cat'));
       return;
     }
     const add = t.closest('[data-add]');
@@ -934,13 +1029,14 @@ function renderReceipt() {
     <div class="receipt-page">
       <button type="button" class="back-link" id="btn-receipt-hist">← 旅记</button>
       <div class="shopping-list" id="shopping-list-card">
+        <div class="sl-ornament" aria-hidden="true"><span></span>MENU CARD<span></span></div>
         <div class="sl-head">
-          <p class="sl-kicker">SHOPPING LIST · ORDER CARD</p>
+          <p class="sl-kicker">ORDER · FOR THE TABLE</p>
           <h2 class="sl-title">${escapeHtml(r.restaurant_name)}</h2>
           <p class="sl-sub">${formatTime(r.createdAt)} · 请按下列菜品为客人准备</p>
-          <p class="sl-hint">Please prepare the items below · 原文点单</p>
+          <p class="sl-hint">Please prepare the items below</p>
         </div>
-        <div class="sl-divider" aria-hidden="true">····························</div>
+        <div class="sl-divider" aria-hidden="true">✦ · · · · · · · · · · · · · · ✦</div>
         <ol class="sl-rows">
           ${r.items
             .map((it) => {
@@ -967,7 +1063,7 @@ function renderReceipt() {
             })
             .join('')}
         </ol>
-        <div class="sl-divider" aria-hidden="true">····························</div>
+        <div class="sl-divider" aria-hidden="true">✦ · · · · · · · · · · · · · · ✦</div>
         <div class="sl-total">
           <div class="sl-total-left">
             <span class="sl-total-label">TOTAL / 合计</span>
@@ -980,7 +1076,10 @@ function renderReceipt() {
           </div>
           <div class="sl-total-orig">${formatMoney(r.total_orig, cur)}</div>
         </div>
-        <p class="sl-foot">DESIGN BY ZEN · 食旅集</p>
+        <p class="sl-foot">
+          DESIGN BY ZEN · 食旅集
+          <span class="sl-stamp">Guest Order</span>
+        </p>
       </div>
       <div class="order-actions receipt-actions">
         <button type="button" class="btn-soft" id="btn-receipt-again">再点一轮</button>
@@ -1204,6 +1303,9 @@ document.getElementById('cfg-base-url')?.addEventListener('input', highlightPres
 })();
 
 render();
+syncChromeHeight();
+window.addEventListener('resize', syncChromeHeight);
+window.addEventListener('orientationchange', () => setTimeout(syncChromeHeight, 120));
 
 // 无 key 时轻提示
 if (!state.settings.apiKey) {
