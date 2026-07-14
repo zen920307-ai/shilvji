@@ -332,6 +332,46 @@ async function postJson(endpoint, apiKey, body) {
 }
 
 /**
+ * 轻量文本问答（用于实时汇率等）
+ * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @param {string} prompt
+ */
+export async function askText(settings, prompt, { maxTokens = 48, temperature = 0 } = {}) {
+  if (!settings?.apiKey?.trim()) throw new Error('缺少 API Key');
+  const base = settings.baseUrl || 'https://api.deepseek.com';
+  const provider = detectProvider(base);
+  const useResponses = provider === 'xai';
+  const endpoint = resolveEndpoint(
+    base,
+    useResponses ? '/responses' : '/chat/completions',
+  );
+  const model =
+    settings.model ||
+    (provider === 'deepseek' ? 'deepseek-v4-flash' : 'grok-4.5');
+
+  const body = useResponses
+    ? {
+        model,
+        input: [
+          {
+            role: 'user',
+            content: [{ type: 'input_text', text: prompt }],
+          },
+        ],
+      }
+    : {
+        model,
+        temperature,
+        max_tokens: maxTokens,
+        ...(provider === 'deepseek' ? { thinking: { type: 'disabled' } } : {}),
+        messages: [{ role: 'user', content: prompt }],
+      };
+
+  const data = await postJson(endpoint, settings.apiKey.trim(), body);
+  return extractResponseText(data).trim();
+}
+
+/**
  * 测试连接（纯文本）
  */
 export async function testApiConnection(settings) {

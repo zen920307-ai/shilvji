@@ -8,7 +8,7 @@ import {
   PROVIDER_PRESETS,
 } from './storage.js';
 import { parseMenuFromImages, testApiConnection } from './ai.js';
-import { formatMoney, enrichItemsWithCNY } from './currency.js';
+import { formatMoney, enrichItemsWithCNY, fxSourceLabel } from './currency.js';
 import { attachImages, dishEmoji } from './images.js';
 
 /** @typedef {{ id: string, name_zh: string, name_original: string, price: number|null, price_cny: number|null, description_zh?: string, image_url?: string, emoji?: string }} Dish */
@@ -288,8 +288,16 @@ async function startAnalyze() {
       menu.currency = state.settings.currency;
     }
 
-    setPipeline('currency', `把 ${menu.currency} 折成熟悉的数字…`);
-    menu.categories = await enrichItemsWithCNY(menu.categories, menu.currency);
+    setPipeline('currency', `AI 实时换算 ${menu.currency} → CNY…`);
+    {
+      const { categories, fx } = await enrichItemsWithCNY(
+        menu.categories,
+        menu.currency,
+        state.settings,
+      );
+      menu.categories = categories;
+      menu.fx = fx;
+    }
 
     setPipeline('images', '免费图库检索菜品照片…');
     menu.categories = await attachImages(menu.categories);
@@ -508,47 +516,63 @@ function renderCapture() {
   const n = state.photos.length;
   return `
     <section class="hero-card">
-      <div class="hero-ticker">
+      <div class="hero-ticker anim-fade-up">
         <div class="hero-ticker-left">
+          <span class="hero-ticker-mark" aria-hidden="true">◎</span>
           <span>字读成乡音</span>
-          <span class="hero-ticker-dot"></span>
-          <span>Tableside Poetry</span>
-          <span class="hero-ticker-dot"></span>
-          <span>Design by Zen</span>
+          <span class="hero-ticker-sep">·</span>
+          <span>TABLESIDE POETRY</span>
+          <span class="hero-ticker-sep">·</span>
+          <span>DESIGN BY ZEN</span>
         </div>
-        <span>远方的纸页</span>
+        <span class="hero-ticker-right">远方的纸页</span>
       </div>
-      <div class="hero-visual">
-        <img class="hero-visual-img" src="${asset('assets/hero-menu.jpg')}" alt="" />
+
+      <div class="hero-banner">
+        <img class="hero-banner-img" src="${asset('assets/hero-menu.jpg')}" alt="" />
         <span class="hero-num" aria-hidden="true">01</span>
         <div class="hero-body">
-          <p class="hero-kicker">
+          <p class="hero-kicker anim-fade-up d1">
             <span>异乡的纸页</span>
             <span class="en">PAGES OF ELSEWHERE</span>
           </p>
-          <h2 class="hero-title">把陌生菜名<br/><em>读成乡音</em></h2>
-          <p class="hero-desc">一页菜单，半段旅程。<br/>镜头对准纸上的字，我们替你译出味道，再递一张清清楚楚的点单卡，给对面那个人。</p>
-          <p class="hero-en-line">
-            <span><b>LENS</b> on the page</span>
-            <span><b>WORDS</b> into taste</span>
-            <span><b>CARD</b> to the table</span>
+          <h2 class="hero-title anim-fade-up d2">
+            <span class="hero-title-line">把陌生菜名</span>
+            <span class="hero-title-line"><em>读成乡音</em></span>
+          </h2>
+          <p class="hero-desc anim-fade-up d3">
+            一页菜单，半段旅程。<br/>
+            镜头对准纸上的字，<br/>
+            我们替你译出味道，<br/>
+            再递一张清清楚楚的点单卡，<br/>
+            给对面那个人。
           </p>
         </div>
       </div>
+
+      <div class="hero-en-line anim-fade-up d4">
+        <span><b>LENS</b> on the page</span>
+        <span class="hero-en-dot">·</span>
+        <span><b>WORDS</b> into taste</span>
+        <span class="hero-en-dot">·</span>
+        <span><b>CARD</b> to the table</span>
+      </div>
+      <div class="hero-rule" aria-hidden="true"></div>
+
       <div class="capture-actions">
-        <label class="btn-capture">
+        <label class="btn-capture anim-fade-up d5">
           <img class="btn-capture-bg" src="${asset('assets/card-camera.jpg')}" alt="" />
           <span class="cap-icon">01 · LENS</span>
           <span class="cap-label">现场拍</span>
-          <span class="cap-sub">Capture now</span>
+          <span class="cap-sub">CAPTURE NOW</span>
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
           <input id="input-camera" type="file" accept="image/*" capture="environment" multiple hidden />
         </label>
-        <button type="button" class="btn-capture" id="btn-gallery">
+        <button type="button" class="btn-capture anim-fade-up d6" id="btn-gallery">
           <img class="btn-capture-bg" src="${asset('assets/card-gallery.jpg')}" alt="" />
           <span class="cap-icon">02 · ROLL</span>
           <span class="cap-label">从相册</span>
-          <span class="cap-sub">From gallery</span>
+          <span class="cap-sub">FROM GALLERY</span>
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
         </button>
       </div>
@@ -583,9 +607,9 @@ function renderCapture() {
 
     <div class="analyze-wrap">
       <button type="button" class="btn-primary" id="btn-analyze" ${n ? '' : 'disabled'}>
-        <span aria-hidden="true">☰</span>
-        开卷 · 读懂这页菜单
-        <span aria-hidden="true">${ARROW_SVG}</span>
+        <span class="btn-ico" aria-hidden="true">☰</span>
+        <span>开卷 · 读懂这页菜单</span>
+        <span class="btn-ico" aria-hidden="true">${ARROW_SVG}</span>
       </button>
       <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
       ${
@@ -723,7 +747,15 @@ async function loadDemoMenu() {
       },
     ],
   };
-  menu.categories = await enrichItemsWithCNY(menu.categories, menu.currency);
+  {
+    const { categories, fx } = await enrichItemsWithCNY(
+      menu.categories,
+      menu.currency,
+      state.settings,
+    );
+    menu.categories = categories;
+    menu.fx = fx;
+  }
   setPipeline('images', '免费图库检索菜品照片…');
   menu.categories = await attachImages(menu.categories);
   setPipeline('done', `${menu.categories.length} 个篇章 · 演示册备好`);
@@ -841,8 +873,14 @@ function renderMenu() {
   const cats = menu.categories;
   const cat = cats[state.activeCat] || cats[0];
 
+  const fx = menu.fx;
+  const fxLine =
+    fx?.rate != null && menu.currency !== 'CNY'
+      ? `1 ${menu.currency} ≈ ¥${Number(fx.rate).toFixed(4)} · ${fxSourceLabel(fx.source)}`
+      : '';
+
   return `
-    <div class="menu-wrap">
+    <div class="menu-wrap anim-page">
       <button type="button" class="back-link" id="btn-back-capture">← 再拍一页</button>
       <div class="menu-header">
         <p class="menu-kicker">${cats.length} 个篇章 · Tableside · Design by Zen</p>
@@ -851,13 +889,14 @@ function renderMenu() {
           ${countDishes(menu)} 道 · ${menu.currency}
           ${menu.language ? ` · ${escapeHtml(menu.language)}` : ''}
         </p>
+        ${fxLine ? `<p class="menu-fx">${escapeHtml(fxLine)}</p>` : ''}
       </div>
       <div class="cat-scroll" id="cat-scroll">
         ${cats
           .map(
             (c, i) => `
           <button type="button" class="cat-chip ${i === state.activeCat ? 'active' : ''}" data-cat="${i}">
-            ${escapeHtml(c.name_zh)}
+            <span class="cat-chip-label">${escapeHtml(c.name_zh)}</span>
             <span class="cat-count">${c.items?.length || 0}</span>
           </button>`,
           )
@@ -1050,17 +1089,19 @@ function renderReceipt() {
   let idx = 0;
 
   return `
-    <div class="receipt-page">
+    <div class="receipt-page anim-page">
       <button type="button" class="back-link" id="btn-receipt-hist">← 旅记</button>
-      <div class="shopping-list" id="shopping-list-card">
-        <div class="sl-ornament" aria-hidden="true"><span></span>MENU CARD<span></span></div>
+      <div class="shopping-list bill-sheet" id="shopping-list-card">
+        <div class="bill-perforation" aria-hidden="true"></div>
         <div class="sl-head">
-          <p class="sl-kicker">ORDER · FOR THE TABLE</p>
+          <p class="sl-kicker">GUEST CHECK · 点单卡</p>
           <h2 class="sl-title">${escapeHtml(r.restaurant_name)}</h2>
-          <p class="sl-sub">${formatTime(r.createdAt)} · 请按下列菜品为客人准备</p>
-          <p class="sl-hint">Please prepare the items below</p>
+          <p class="sl-sub">No. ${String(r.createdAt).slice(-6)} · ${formatTime(r.createdAt)}</p>
+          <p class="sl-hint">Please prepare the following · 请按下列菜品准备</p>
         </div>
-        <div class="sl-divider" aria-hidden="true">✦ · · · · · · · · · · · · · · ✦</div>
+        <div class="bill-table-head" aria-hidden="true">
+          <span>#</span><span>ITEM</span><span>QTY</span><span>AMT</span>
+        </div>
         <ol class="sl-rows">
           ${r.items
             .map((it) => {
@@ -1077,21 +1118,20 @@ function renderReceipt() {
                 <div class="sl-body">
                   <p class="sl-name-orig">${escapeHtml(it.name_original)}</p>
                   <p class="sl-name-zh">${escapeHtml(it.name_zh)}</p>
+                  ${lineCny ? `<p class="sl-line-cny">${lineCny}</p>` : ''}
                 </div>
-                <div class="sl-qty">×${it.qty}</div>
+                <div class="sl-qty">${it.qty}</div>
                 <div class="sl-price">
                   <span class="sl-price-orig">${lineOrig}</span>
-                  ${lineCny ? `<span class="sl-price-cny">${lineCny}</span>` : ''}
                 </div>
               </li>`;
             })
             .join('')}
         </ol>
-        <div class="sl-divider" aria-hidden="true">✦ · · · · · · · · · · · · · · ✦</div>
         <div class="sl-total">
           <div class="sl-total-left">
-            <span class="sl-total-label">TOTAL / 合计</span>
-            <span class="sl-total-count">${r.count} items</span>
+            <span class="sl-total-label">TOTAL</span>
+            <span class="sl-total-count">${r.count} items · ${cur}</span>
             ${
               r.total_cny > 0
                 ? `<span class="sl-total-cny">约 ¥${Number(r.total_cny).toFixed(2)}</span>`
@@ -1100,10 +1140,15 @@ function renderReceipt() {
           </div>
           <div class="sl-total-orig">${formatMoney(r.total_orig, cur)}</div>
         </div>
+        <div class="bill-sign">
+          <span>Server · ___________</span>
+          <span>Guest · ___________</span>
+        </div>
         <p class="sl-foot">
-          DESIGN BY ZEN · 食旅集
-          <span class="sl-stamp">Guest Order</span>
+          THANK YOU · DESIGN BY ZEN · 食旅集
+          <span class="sl-stamp">ORDER</span>
         </p>
+        <div class="bill-perforation bottom" aria-hidden="true"></div>
       </div>
       <div class="order-actions receipt-actions">
         <button type="button" class="btn-soft" id="btn-receipt-again">再点一轮</button>
