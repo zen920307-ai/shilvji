@@ -534,7 +534,7 @@ body[data-view='menu'] .main.has-cart {
 .hero-title {
   margin: 0 0 16px;
   font-family: var(--serif);
-  font-size: clamp(1.95rem, 8.5vw, 2.4rem);
+  font-size: clamp(1.75rem, 7.5vw, 2.2rem);
   font-weight: 600;
   line-height: 1.28;
   letter-spacing: 0.02em;
@@ -545,6 +545,12 @@ body[data-view='menu'] .main.has-cart {
   display: block;
 }
 
+/* 第一句禁止断行 */
+.hero-title-main {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
 .hero-title em {
   font-style: normal;
   display: inline;
@@ -553,6 +559,7 @@ body[data-view='menu'] .main.has-cart {
   padding: 0 3px 1px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  white-space: nowrap;
 }
 
 .hero-desc {
@@ -563,19 +570,19 @@ body[data-view='menu'] .main.has-cart {
   max-width: 17em;
 }
 
-/* 三句英文铺满整行，拉大间距 */
+/* 三句英文均分 + 中间 · 分隔，字距拉宽 */
 .hero-en-line {
   margin: 0;
   padding: 14px 16px;
   font-family: var(--mono);
-  font-size: 0.52rem;
-  letter-spacing: 0.06em;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-faint);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0;
   width: 100%;
   box-sizing: border-box;
   background: var(--bg);
@@ -587,6 +594,7 @@ body[data-view='menu'] .main.has-cart {
   color: var(--accent-deep);
   font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.14em;
 }
 
 .hero-en-line > span:first-child {
@@ -597,13 +605,19 @@ body[data-view='menu'] .main.has-cart {
   text-align: right;
 }
 
+.hero-en-line > .hero-en-dot {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  color: var(--ink-faint);
+  opacity: 0.55;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 .hero-en-line b {
   color: var(--accent-deep);
   font-weight: 600;
-}
-
-.hero-en-dot {
-  opacity: 0.4;
 }
 
 .hero-rule {
@@ -682,13 +696,21 @@ body[data-view='menu'] .main.has-cart {
   content: '';
   position: absolute;
   inset: 0;
-  /* 上亮下略暗，方便文案放在上方 */
-  background: linear-gradient(
-    180deg,
-    rgba(246, 243, 237, 0.82) 0%,
-    rgba(246, 243, 237, 0.35) 42%,
-    rgba(246, 243, 237, 0.15) 100%
-  );
+  /* 左上角更强遮罩，保证标题文字清晰 */
+  background:
+    linear-gradient(
+      135deg,
+      rgba(246, 243, 237, 0.94) 0%,
+      rgba(246, 243, 237, 0.72) 28%,
+      rgba(246, 243, 237, 0.28) 52%,
+      rgba(246, 243, 237, 0.12) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(246, 243, 237, 0.55) 0%,
+      rgba(246, 243, 237, 0.2) 40%,
+      rgba(246, 243, 237, 0.08) 100%
+    );
   pointer-events: none;
 }
 
@@ -894,7 +916,7 @@ body[data-view='menu'] .main.has-cart {
   border-radius: 50%;
 }
 
-/* Bottom analyze bar · 贴屏幕最底，按钮更高 */
+/* Bottom analyze bar · 贴屏幕最底，向上微弱投影 */
 .analyze-wrap {
   position: fixed;
   left: 50%;
@@ -911,7 +933,7 @@ body[data-view='menu'] .main.has-cart {
   padding-bottom: 8px;
   background: var(--bg);
   border-top: 1px solid var(--line);
-  box-shadow: none;
+  box-shadow: 0 -6px 20px rgba(44, 41, 36, 0.07);
 }
 
 /* 用同色块把底栏以下区域也刷成页面色，消除割裂 */
@@ -1011,123 +1033,121 @@ body[data-view='menu'] .main.has-cart {
   align-items: center;
 }
 
-/* 餐饮加载动画：热汤面碗 + 筷子 + 蒸汽（覆盖全局直角规则） */
+/* 餐饮加载动画：汉堡 / 意面 / 刀叉 轮播 */
 .pipeline-food {
   position: relative;
-  width: 104px;
-  height: 104px;
+  width: 108px;
+  height: 108px;
   flex-shrink: 0;
-  color: var(--accent-deep);
 }
 
-.food-stage {
+.food-carousel {
   position: relative;
   width: 100%;
   height: 100%;
+  background: radial-gradient(circle at 50% 55%, rgba(143, 145, 120, 0.14), transparent 68%);
+  border-radius: 50% !important;
+  overflow: hidden;
+}
+
+.food-slide {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at 50% 55%, rgba(143, 145, 120, 0.12), transparent 62%);
-  border-radius: 50% !important;
-  animation: food-breathe 2.8s ease-in-out infinite;
+  opacity: 0;
+  transform: scale(0.9) translateY(8px);
+  pointer-events: none;
+}
+
+/* 汉堡 → 意面 → 刀叉，约 6s 一轮，局部刷新不中断 */
+.food-slide-1 {
+  animation: food-cycle-1 6s ease-in-out infinite;
+}
+.food-slide-2 {
+  animation: food-cycle-2 6s ease-in-out infinite;
+}
+.food-slide-3 {
+  animation: food-cycle-3 6s ease-in-out infinite;
+}
+
+@keyframes food-cycle-1 {
+  0%,
+  26% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  32%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+}
+
+@keyframes food-cycle-2 {
+  0%,
+  30% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  36%,
+  60% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  66%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+}
+
+@keyframes food-cycle-3 {
+  0%,
+  64% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  70%,
+  94% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
 }
 
 .food-svg {
-  width: 88px;
-  height: 88px;
+  width: 86px;
+  height: 86px;
   display: block;
   overflow: visible;
 }
 
-.food-bowl-rim,
-.food-bowl-body {
-  color: var(--accent-deep);
+.pasta-swirl {
+  animation: pasta-swirl 2.2s ease-in-out infinite;
 }
 
-.food-broth {
-  animation: broth-ripple 2.2s ease-in-out infinite;
-  transform-origin: 48px 56px;
+.pasta-swirl.b {
+  animation-delay: 0.15s;
 }
-
-.food-noodle {
-  animation: noodle-sway 2.4s ease-in-out infinite;
-}
-
-.food-noodle.n2 {
+.pasta-swirl.c {
   animation-delay: 0.3s;
 }
 
-.food-chop {
-  transform-origin: 70px 20px;
-  animation: chopstick-dip 2.6s ease-in-out infinite;
+.cutlery-fork {
+  animation: cutlery-float 2.4s ease-in-out infinite;
+  transform-origin: 36px 40px;
 }
 
-.food-chop.c2 {
-  animation-delay: 0.12s;
+.cutlery-knife {
+  animation: cutlery-float 2.4s ease-in-out infinite reverse;
+  transform-origin: 60px 40px;
 }
 
-.food-dot {
-  animation: food-dot-pop 2s ease-in-out infinite;
-}
-
-.food-dot.d2 {
-  animation-delay: 0.25s;
-}
-.food-dot.d3 {
-  animation-delay: 0.5s;
-}
-
-.food-steam {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  width: 4px;
-  height: 18px;
-  margin-left: -2px;
-  background: linear-gradient(180deg, transparent, rgba(143, 145, 120, 0.55), transparent);
-  border-radius: 99px !important;
-  opacity: 0;
-  animation: food-steam 2.1s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.food-steam.s1 {
-  animation-delay: 0s;
-}
-.food-steam.s2 {
-  margin-left: -12px;
-  animation-delay: 0.35s;
-  height: 16px;
-}
-.food-steam.s3 {
-  margin-left: 8px;
-  animation-delay: 0.7s;
-  height: 15px;
-}
-
-@keyframes food-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.04);
-  }
-}
-
-@keyframes broth-ripple {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
-}
-
-@keyframes noodle-sway {
+@keyframes pasta-swirl {
   0%,
   100% {
     transform: translateX(0);
@@ -1137,39 +1157,13 @@ body[data-view='menu'] .main.has-cart {
   }
 }
 
-@keyframes chopstick-dip {
+@keyframes cutlery-float {
   0%,
   100% {
-    transform: rotate(0deg) translateY(0);
+    transform: translateY(0) rotate(0deg);
   }
   50% {
-    transform: rotate(-6deg) translateY(2px);
-  }
-}
-
-@keyframes food-dot-pop {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-
-@keyframes food-steam {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scaleY(0.5);
-  }
-  35% {
-    opacity: 0.85;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-16px) scaleY(1.15);
+    transform: translateY(-4px) rotate(-4deg);
   }
 }
 
@@ -1949,7 +1943,7 @@ body[data-view='menu'] .main.has-cart {
   background: var(--cart-bg);
   border-top: 1px solid var(--line);
   pointer-events: none;
-  box-shadow: none;
+  box-shadow: 0 -6px 20px rgba(44, 41, 36, 0.07);
 }
 
 /* 向下延伸同色背景，盖住系统底边/页面割裂 */
