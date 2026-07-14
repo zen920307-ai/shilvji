@@ -1235,11 +1235,15 @@ body[data-view='menu'] .main.has-cart {
   padding: 4px 16px 14px;
 }
 
+.menu-name-block {
+  margin: 0 0 10px;
+}
+
 .menu-title-input {
   display: block;
   width: 100%;
-  margin: 0 0 10px;
-  padding: 0;
+  margin: 0;
+  padding: 0 0 2px;
   border: none;
   border-bottom: 1px dashed transparent;
   background: transparent;
@@ -1257,6 +1261,94 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .menu-title-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.menu-name-hint {
+  margin: 6px 0 0;
+  font-size: 0.68rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+
+.menu-locate-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.menu-address {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--ink-dim);
+  word-break: break-word;
+}
+
+.menu-address.is-empty {
+  color: var(--ink-faint);
+}
+
+.btn-locate {
+  flex-shrink: 0;
+  border: 1px solid rgba(143, 145, 120, 0.35);
+  background: rgba(143, 145, 120, 0.12);
+  color: var(--accent-deep);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 7px 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-locate:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.btn-locate:active:not(:disabled) {
+  background: rgba(143, 145, 120, 0.22);
+}
+
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-soft-sm {
+  border: 1px solid var(--line-hard);
+  background: transparent;
+  color: var(--accent-deep);
+  font-family: var(--font);
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.btn-soft-sm:active {
+  background: rgba(143, 145, 120, 0.12);
+}
+
+.history-addr,
+.history-detail-addr {
+  margin: 6px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  word-break: break-word;
+}
+
+.history-detail-addr {
+  margin-top: 8px;
+}
+
+.history-detail-addr.is-empty {
   color: var(--ink-faint);
 }
 

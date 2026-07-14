@@ -43,6 +43,9 @@ const state = {
   /** @type {{ stepId: string, note: string, meta: object }} */
   pipeline: { stepId: 'compress', note: '', meta: {} },
   apiTest: { status: 'idle', message: '' }, // idle | testing | ok | error
+  /** 进行中任务世代号：递增后丢弃旧任务结果 */
+  taskGen: 0,
+  locating: false,
 };
 
 const main = document.getElementById('main');
@@ -96,6 +99,12 @@ function toast(msg, ms = 2400) {
 }
 
 function goHome() {
+  if (state.view === 'loading') {
+    const ok = window.confirm('有任务正在进行中，需要终止任务吗？');
+    if (!ok) return;
+    state.taskGen += 1;
+    state.pipeline = { stepId: 'compress', note: '', meta: {} };
+  }
   state.view = 'capture';
   state.receipt = null;
   render();
@@ -213,6 +222,10 @@ async function runApiTest() {
 }
 
 function setPipeline(stepId, note = '', meta = {}) {
+  // 任务已终止则不再刷新 loading
+  if (state.view !== 'loading' && state.view !== 'menu') {
+    /* allow other views */
+  }
   state.pipeline = { stepId, note, meta };
   if (state.view === 'loading') {
     // 局部更新 loading UI，避免整页闪烁
@@ -294,6 +307,7 @@ async function startAnalyze() {
     return;
   }
 
+  const myGen = ++state.taskGen;
   state.view = 'loading';
   state.cart = {};
   state.menu = null;
@@ -303,6 +317,7 @@ async function startAnalyze() {
   try {
     const files = state.photos.map((p) => p.file);
     let menu = await parseMenuFromImages(files, state.settings, (step, meta = {}) => {
+      if (myGen !== state.taskGen) return;
       if (step === 'compress') {
         const cur = meta.current || 0;
         const total = meta.total || files.length;
@@ -340,6 +355,8 @@ async function startAnalyze() {
       }
     });
 
+    if (myGen !== state.taskGen) return;
+
     if (state.settings.currency && state.settings.currency !== 'auto') {
       menu.currency = state.settings.currency;
     }
@@ -351,29 +368,34 @@ async function startAnalyze() {
         menu.currency,
         state.settings,
       );
+      if (myGen !== state.taskGen) return;
       menu.categories = categories;
       menu.fx = fx;
     }
 
     setPipeline('images', '免费图库检索菜品照片…');
     menu.categories = await attachImages(menu.categories);
+    if (myGen !== state.taskGen) return;
 
     setPipeline(
       'done',
       `${menu.categories.length} 个篇章 · ${countDishes(menu)} 道可点`,
     );
     await new Promise((r) => setTimeout(r, 420));
+    if (myGen !== state.taskGen) return;
 
+    menu.address = menu.address || '';
     state.menu = menu;
     state.activeCat = 0;
     state.view = 'menu';
     toast(`册子备好 · ${menu.categories.length} 类 / ${countDishes(menu)} 道`);
   } catch (err) {
+    if (myGen !== state.taskGen) return;
     console.error(err);
     state.view = 'capture';
     toast(err.message || '这次没读清，再试一张更清楚的', 3200);
   }
-  render();
+  if (myGen === state.taskGen) render();
 }
 
 function countDishes(menu) {
@@ -454,6 +476,16 @@ function removeOrderItem(dishId) {
   render();
 }
 
+/** 序列化当前菜单，供历史「加餐」恢复（去掉过大字段的副本） */
+function snapshotMenu(menu) {
+  if (!menu) return null;
+  try {
+    return JSON.parse(JSON.stringify(menu));
+  } catch {
+    return null;
+  }
+}
+
 function saveCurrentOrder() {
   if (!state.orderItems.length) return;
   const { totalCny, totalOrig } = orderTotals(state.orderItems);
@@ -461,6 +493,7 @@ function saveCurrentOrder() {
     id: uid('order'),
     createdAt: Date.now(),
     restaurant_name: state.menu?.restaurant_name || '某处小馆',
+    restaurant_address: state.menu?.address || '',
     currency: state.menu?.currency || 'USD',
     items: state.orderItems.map(({ dish, qty }) => ({
       name_zh: dish.name_zh,
@@ -471,9 +504,104 @@ function saveCurrentOrder() {
     })),
     total_cny: totalCny,
     total_orig: totalOrig,
+    menu_snapshot: snapshotMenu(state.menu),
   };
   addHistoryEntry(entry);
   toast('写进旅记了');
+}
+
+/** 从历史加餐：恢复当时菜单，回到点单页 */
+function resumeOrderFromHistory(entry) {
+  if (!entry?.menu_snapshot?.categories?.length) {
+    toast('这条旧记没有可继续的菜单');
+    return;
+  }
+  state.menu = entry.menu_snapshot;
+  if (entry.restaurant_name) state.menu.restaurant_name = entry.restaurant_name;
+  if (entry.restaurant_address != null) state.menu.address = entry.restaurant_address;
+  state.activeCat = 0;
+  state.cart = {};
+  state.orderItems = [];
+  state.receipt = null;
+  state.historyDetail = null;
+  state.view = 'menu';
+  toast('继续加餐 · 菜单已恢复');
+  render();
+}
+
+async function locateRestaurant() {
+  if (!state.menu) return;
+  if (!navigator.geolocation) {
+    toast('当前环境不支持定位');
+    return;
+  }
+  if (state.locating) return;
+  state.locating = true;
+  const btn = document.getElementById('btn-locate');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '定位中…';
+  }
+  try {
+    const pos = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 60000,
+      });
+    });
+    const { latitude, longitude } = pos.coords;
+    let address = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.display_name) address = data.display_name;
+      }
+    } catch {
+      /* 用坐标兜底 */
+    }
+    state.menu.address = address;
+    state.menu.lat = latitude;
+    state.menu.lng = longitude;
+    toast('已写入当前位置');
+    // 局部刷新地址区
+    const addrEl = document.getElementById('menu-address');
+    if (addrEl) {
+      addrEl.textContent = address;
+      addrEl.classList.remove('is-empty');
+    } else {
+      render();
+    }
+  } catch (err) {
+    const msg =
+      err?.code === 1
+        ? '需要定位权限才能获取地址'
+        : err?.code === 3
+          ? '定位超时，请再试一次'
+          : '定位失败，请检查权限与网络';
+    toast(msg, 3000);
+  } finally {
+    state.locating = false;
+    const btn2 = document.getElementById('btn-locate');
+    if (btn2) {
+      btn2.disabled = false;
+      btn2.textContent = '定位';
+    }
+  }
+}
+
+function goHistory() {
+  if (state.view === 'loading') {
+    const ok = window.confirm('有任务正在进行中，需要终止任务吗？');
+    if (!ok) return;
+    // 终止进行中任务
+    state.taskGen += 1;
+    state.pipeline = { stepId: 'compress', note: '', meta: {} };
+  }
+  state.view = 'history';
+  render();
 }
 
 function orderTotals(items) {
@@ -576,13 +704,13 @@ function renderCapture() {
       <div class="hero-ticker anim-fade-up">
         <div class="hero-ticker-left">
           <span class="hero-ticker-mark" aria-hidden="true">◎</span>
-          <span>字读成乡音</span>
+          <span>异乡有字</span>
           <span class="hero-ticker-sep">·</span>
-          <span>TABLESIDE POETRY</span>
+          <span>餐桌有诗</span>
           <span class="hero-ticker-sep">·</span>
-          <span>DESIGN BY ZEN</span>
+          <span>TABLESIDE NOTES</span>
         </div>
-        <span class="hero-ticker-right">远方的纸页</span>
+        <span class="hero-ticker-right">把远方装订成册</span>
       </div>
 
       <div class="hero-banner">
@@ -590,29 +718,29 @@ function renderCapture() {
         <span class="hero-num" aria-hidden="true">01</span>
         <div class="hero-body">
           <p class="hero-kicker anim-fade-up d1">
-            <span>异乡的纸页</span>
-            <span class="en">PAGES OF ELSEWHERE</span>
+            <span>远方的一页</span>
+            <span class="en">PAGES FROM AFAR</span>
           </p>
           <h2 class="hero-title anim-fade-up d2">
-            <span class="hero-title-line">把陌生菜名</span>
-            <span class="hero-title-line"><em>读成乡音</em></span>
+            <span class="hero-title-line">把菜单上的远方</span>
+            <span class="hero-title-line"><em>读给你听</em></span>
           </h2>
           <p class="hero-desc anim-fade-up d3">
-            一页菜单，半段旅程。<br/>
-            镜头对准纸上的字，<br/>
-            我们替你译出味道，<br/>
-            再递一张清清楚楚的点单卡，<br/>
-            给对面那个人。
+            一张菜单，是旅途落在餐桌上的注脚。<br/>
+            对准纸上的陌生字句，<br/>
+            我们替你译出名字，也译出味道，<br/>
+            再把这一餐，<br/>
+            整理成一张从容好用的点单卡。
           </p>
         </div>
       </div>
 
       <div class="hero-en-line anim-fade-up d4">
-        <span><b>LENS</b> on the page</span>
+        <span>FRAME THE PAGE</span>
         <span class="hero-en-dot">·</span>
-        <span><b>WORDS</b> into taste</span>
+        <span>READ THE FLAVOUR</span>
         <span class="hero-en-dot">·</span>
-        <span><b>CARD</b> to the table</span>
+        <span>KEEP THE JOURNEY</span>
       </div>
       <div class="hero-rule" aria-hidden="true"></div>
 
@@ -712,6 +840,7 @@ function bindCapture() {
 }
 
 async function loadDemoMenu() {
+  const myGen = ++state.taskGen;
   state.view = 'loading';
   state.cart = {};
   state.pipeline = { stepId: 'compress', note: '演示 · 假装读一页菜单', meta: {} };
@@ -727,14 +856,17 @@ async function loadDemoMenu() {
     ['images', '想象味道…'],
   ];
   for (const [id, note] of fakeSteps) {
+    if (myGen !== state.taskGen) return;
     setPipeline(id, note);
     await new Promise((r) => setTimeout(r, 280));
   }
+  if (myGen !== state.taskGen) return;
 
   const menu = {
     restaurant_name: '演示小馆 · Demo Bistro',
     currency: 'EUR',
     language: 'English / Italian',
+    address: '',
     categories: [
       {
         name_zh: '开胃菜',
@@ -818,13 +950,16 @@ async function loadDemoMenu() {
       menu.currency,
       state.settings,
     );
+    if (myGen !== state.taskGen) return;
     menu.categories = categories;
     menu.fx = fx;
   }
   setPipeline('images', '免费图库检索菜品照片…');
   menu.categories = await attachImages(menu.categories);
+  if (myGen !== state.taskGen) return;
   setPipeline('done', `${menu.categories.length} 个篇章 · 演示册备好`);
   await new Promise((r) => setTimeout(r, 350));
+  if (myGen !== state.taskGen) return;
   state.menu = menu;
   state.activeCat = 0;
   state.view = 'menu';
@@ -949,19 +1084,30 @@ function renderMenu() {
         ? '人民币计价'
         : '';
 
+  const address = menu.address || '';
+
   return `
     <div class="menu-wrap anim-page">
       ${backBtn('btn-back-capture', '返回')}
       <div class="menu-header">
-        <input
-          type="text"
-          class="menu-title-input"
-          id="menu-name-edit"
-          value="${escapeHtml(menu.restaurant_name || '')}"
-          placeholder="输入店名"
-          maxlength="48"
-          autocomplete="off"
-        />
+        <div class="menu-name-block">
+          <input
+            type="text"
+            class="menu-title-input"
+            id="menu-name-edit"
+            value="${escapeHtml(menu.restaurant_name || '')}"
+            placeholder="输入店名"
+            maxlength="48"
+            autocomplete="off"
+          />
+          <p class="menu-name-hint">点店名可编辑 · 改完会随点单一起记下</p>
+        </div>
+        <div class="menu-locate-row">
+          <p id="menu-address" class="menu-address ${address ? '' : 'is-empty'}">${
+            address ? escapeHtml(address) : '尚未定位 · 点右侧获取当前位置'
+          }</p>
+          <button type="button" class="btn-locate" id="btn-locate">定位</button>
+        </div>
         <div class="menu-meta-row">
           <p class="menu-meta-left">${cats.length} 个分类 · ${dishCount} 道菜品</p>
           ${fxRight ? `<p class="menu-meta-right"><span class="menu-fx-tag">${escapeHtml(fxRight)}</span></p>` : ''}
@@ -1045,6 +1191,9 @@ function bindMenu() {
     if (!state.menu) return;
     const v = (nameInput.value || '').trim() || '未知餐厅';
     state.menu.restaurant_name = v;
+  });
+  document.getElementById('btn-locate')?.addEventListener('click', () => {
+    locateRestaurant();
   });
 
   // 事件委托：数量按钮会 outerHTML 替换，必须挂在容器上
@@ -1372,6 +1521,11 @@ function renderHistory() {
             <div class="history-item" data-hid="${h.id}">
               <h3>${escapeHtml(h.restaurant_name)}</h3>
               <p>${formatTime(h.createdAt)} · ${h.items?.length || 0} 道</p>
+              ${
+                h.restaurant_address
+                  ? `<p class="history-addr">${escapeHtml(h.restaurant_address)}</p>`
+                  : ''
+              }
               <div class="row">
                 <span>
                   ${h.total_orig != null ? formatMoney(h.total_orig, h.currency || 'USD') : ''}
@@ -1379,7 +1533,14 @@ function renderHistory() {
                     约 ¥${Number(h.total_cny || 0).toFixed(2)}
                   </em>
                 </span>
-                <button type="button" class="btn-danger-soft" data-hdel="${h.id}">抹去</button>
+                <div class="history-actions">
+                  ${
+                    h.menu_snapshot?.categories?.length
+                      ? `<button type="button" class="btn-soft-sm" data-hresume="${h.id}">加餐</button>`
+                      : ''
+                  }
+                  <button type="button" class="btn-danger-soft" data-hdel="${h.id}">抹去</button>
+                </div>
               </div>
             </div>`,
               )
@@ -1400,7 +1561,7 @@ function bindHistory() {
   });
   document.querySelectorAll('[data-hid]').forEach((el) => {
     el.addEventListener('click', (e) => {
-      if (e.target.closest('[data-hdel]')) return;
+      if (e.target.closest('[data-hdel], [data-hresume]')) return;
       const id = el.getAttribute('data-hid');
       const item = loadHistory().find((x) => x.id === id);
       if (item) {
@@ -1408,6 +1569,14 @@ function bindHistory() {
         state.view = 'history-detail';
         render();
       }
+    });
+  });
+  document.querySelectorAll('[data-hresume]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-hresume');
+      const item = loadHistory().find((x) => x.id === id);
+      if (item) resumeOrderFromHistory(item);
     });
   });
   document.querySelectorAll('[data-hdel]').forEach((btn) => {
@@ -1424,14 +1593,20 @@ function renderHistoryDetail() {
   const h = state.historyDetail;
   if (!h) return renderHistory();
   const cur = h.currency || 'USD';
+  const canResume = !!h.menu_snapshot?.categories?.length;
   return `
     <div class="order-page">
       ${backBtn('btn-hdd-back', '返回')}
       <div class="order-head">
         <h2>${escapeHtml(h.restaurant_name)}</h2>
         <p class="menu-meta" style="margin-top:8px">${formatTime(h.createdAt)}</p>
+        ${
+          h.restaurant_address
+            ? `<p class="history-detail-addr">${escapeHtml(h.restaurant_address)}</p>`
+            : `<p class="history-detail-addr is-empty">未记录地址</p>`
+        }
       </div>
-      <p class="order-tip">旧笺 · 原文在上 · 仍可递给服务员 · DESIGN BY ZEN</p>
+      <p class="order-tip">旧笺 · 原文在上 · 仍可递给服务员</p>
       ${(h.items || [])
         .map(
           (it) => `
@@ -1455,6 +1630,13 @@ function renderHistoryDetail() {
         </div>
         <strong class="sum-orig">${formatMoney(h.total_orig, cur)}</strong>
       </div>
+      ${
+        canResume
+          ? `<div class="order-actions" style="margin-top:12px">
+              <button type="button" class="btn-primary" id="btn-hdd-resume" style="grid-column:1/-1">加餐 · 回到点单页</button>
+            </div>`
+          : ''
+      }
     </div>
   `;
 }
@@ -1463,6 +1645,9 @@ function bindHistoryDetail() {
   document.getElementById('btn-hdd-back')?.addEventListener('click', () => {
     state.view = 'history';
     render();
+  });
+  document.getElementById('btn-hdd-resume')?.addEventListener('click', () => {
+    if (state.historyDetail) resumeOrderFromHistory(state.historyDetail);
   });
 }
 
@@ -1589,8 +1774,7 @@ document.getElementById('btn-home')?.addEventListener('keydown', (e) => {
 });
 document.getElementById('btn-settings')?.addEventListener('click', openSettings);
 document.getElementById('btn-history')?.addEventListener('click', () => {
-  state.view = 'history';
-  render();
+  goHistory();
 });
 document.getElementById('btn-checkout')?.addEventListener('click', checkout);
 
