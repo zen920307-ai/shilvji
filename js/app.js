@@ -383,6 +383,8 @@ function addToCart(dish) {
   refreshDishCard(dish.id);
   updateCartBar();
   toast(`已记下 · ${dish.name_zh}`);
+  const sheet = document.getElementById('cart-sheet');
+  if (sheet && !sheet.classList.contains('hidden')) renderCartSheetList();
 }
 
 function setQty(dishId, qty) {
@@ -393,6 +395,9 @@ function setQty(dishId, qty) {
   }
   refreshDishCard(dishId);
   updateCartBar();
+  // 弹层打开时同步刷新
+  const sheet = document.getElementById('cart-sheet');
+  if (sheet && !sheet.classList.contains('hidden')) renderCartSheetList();
 }
 
 function refreshDishCard(dishId) {
@@ -649,7 +654,6 @@ function renderCapture() {
               还没有菜单照片<br/>整页入镜、字迹清楚，读得更准
             </div>`
       }
-      ${zenCredit('旅人的菜单册')}
     </section>
 
     <div class="analyze-wrap">
@@ -897,7 +901,7 @@ function renderDishCard(dish) {
       </div>`
     : `<button type="button" class="btn-add" data-add="${dish.id}">记下</button>`;
 
-  const img = dish.image_url
+  const imgInner = dish.image_url
     ? `<img class="dish-img" src="${dish.image_url}" alt="" loading="lazy"
          onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
        <div class="dish-img-fallback" style="display:none">${dish.emoji || dishEmoji(dish.name_zh)}</div>`
@@ -905,7 +909,9 @@ function renderDishCard(dish) {
 
   return `
     <article class="dish-card" data-dish-id="${dish.id}">
-      ${img}
+      <button type="button" class="dish-img-hit" data-open-cart="${dish.id}" aria-label="查看已点">
+        ${imgInner}
+      </button>
       <div class="dish-body">
         <h3 class="dish-name-zh">${escapeHtml(dish.name_zh)}</h3>
         <p class="dish-name-orig">${escapeHtml(dish.name_original)}</p>
@@ -930,22 +936,31 @@ function renderMenu() {
   const cat = cats[state.activeCat] || cats[0];
 
   const fx = menu.fx;
-  const fxLine =
+  const dishCount = countDishes(menu);
+  const fxRight =
     fx?.rate != null && menu.currency !== 'CNY'
-      ? `1 ${menu.currency} ≈ ¥${Number(fx.rate).toFixed(4)} · ${fxSourceLabel(fx.source)}`
-      : '';
+      ? `1 ${menu.currency} ≈ ¥${Number(fx.rate).toFixed(fx.rate >= 1 ? 2 : 4)}`
+      : menu.currency === 'CNY'
+        ? '人民币计价'
+        : '';
 
   return `
     <div class="menu-wrap anim-page">
       <button type="button" class="back-link" id="btn-back-capture">← 再拍一页</button>
       <div class="menu-header">
-        <p class="menu-kicker">${cats.length} 个篇章 · Tableside · Design by Zen</p>
-        <h2>${escapeHtml(menu.restaurant_name)}</h2>
-        <p class="menu-meta">
-          ${countDishes(menu)} 道 · ${menu.currency}
-          ${menu.language ? ` · ${escapeHtml(menu.language)}` : ''}
-        </p>
-        ${fxLine ? `<p class="menu-fx">${escapeHtml(fxLine)}</p>` : ''}
+        <input
+          type="text"
+          class="menu-title-input"
+          id="menu-name-edit"
+          value="${escapeHtml(menu.restaurant_name || '')}"
+          placeholder="输入店名"
+          maxlength="48"
+          autocomplete="off"
+        />
+        <div class="menu-meta-row">
+          <p class="menu-meta-left">${cats.length} 个分类 · ${dishCount} 道菜品</p>
+          ${fxRight ? `<p class="menu-meta-right">${escapeHtml(fxRight)}</p>` : ''}
+        </div>
       </div>
       <div class="cat-scroll" id="cat-scroll">
         ${cats
@@ -961,7 +976,6 @@ function renderMenu() {
       <div class="dish-list enter-anim" id="dish-list">
         ${(cat?.items || []).map((d) => renderDishCard(d)).join('')}
       </div>
-      ${zenCredit('分门别类')}
     </div>
   `;
 }
@@ -1008,11 +1022,30 @@ function bindMenu() {
     state.view = 'capture';
     render();
   });
+  const nameInput = document.getElementById('menu-name-edit');
+  nameInput?.addEventListener('change', () => {
+    if (!state.menu) return;
+    const v = (nameInput.value || '').trim() || '未知餐厅';
+    state.menu.restaurant_name = v;
+    nameInput.value = v;
+  });
+  nameInput?.addEventListener('blur', () => {
+    if (!state.menu) return;
+    const v = (nameInput.value || '').trim() || '未知餐厅';
+    state.menu.restaurant_name = v;
+  });
+
   // 事件委托：数量按钮会 outerHTML 替换，必须挂在容器上
   const root = main;
   root.onclick = (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
+    const openCart = t.closest('[data-open-cart]');
+    if (openCart) {
+      e.preventDefault();
+      openCartSheet();
+      return;
+    }
     const cat = t.closest('[data-cat]');
     if (cat) {
       switchCategory(cat.getAttribute('data-cat'));
@@ -1038,6 +1071,69 @@ function bindMenu() {
       if (cur) setQty(id, cur.qty - 1);
     }
   };
+}
+
+function renderCartSheetList() {
+  const listEl = document.getElementById('cart-sheet-list');
+  const countEl = document.getElementById('cart-sheet-count');
+  const totalEl = document.getElementById('cart-sheet-total');
+  if (!listEl) return;
+
+  const items = Object.values(state.cart);
+  const cur = state.menu?.currency || 'USD';
+  const { count, totalCny, totalOrig, hasOrig } = cartStats();
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="empty-state" style="margin:12px 16px;border:1px dashed var(--line-hard)">
+      还没有记下菜品<br/>点菜品图或「记下」加入清单
+    </div>`;
+  } else {
+    listEl.innerHTML = items
+      .map(({ dish, qty }) => {
+        const line =
+          dish.price != null ? formatMoney(dish.price * qty, cur) : '—';
+        return `
+        <div class="cart-sheet-row" data-sheet-id="${dish.id}">
+          <div>
+            <p class="cart-sheet-name">${escapeHtml(dish.name_zh)}</p>
+            <p class="cart-sheet-sub">${escapeHtml(dish.name_original)}</p>
+          </div>
+          <div class="cart-sheet-side">
+            <span class="cart-sheet-price">${line}</span>
+            <div class="qty-ctrl">
+              <button type="button" data-sheet-minus="${dish.id}" aria-label="减少">−</button>
+              <span>${qty}</span>
+              <button type="button" data-sheet-plus="${dish.id}" aria-label="增加">+</button>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  if (countEl) countEl.textContent = `${count} 份`;
+  if (totalEl) {
+    totalEl.textContent = hasOrig
+      ? formatMoney(totalOrig, cur)
+      : totalCny > 0
+        ? `约 ¥${totalCny.toFixed(2)}`
+        : '—';
+  }
+}
+
+function openCartSheet() {
+  const sheet = document.getElementById('cart-sheet');
+  if (!sheet) return;
+  renderCartSheetList();
+  sheet.classList.remove('hidden');
+  sheet.setAttribute('aria-hidden', 'false');
+}
+
+function closeCartSheet() {
+  const sheet = document.getElementById('cart-sheet');
+  if (!sheet) return;
+  sheet.classList.add('hidden');
+  sheet.setAttribute('aria-hidden', 'true');
 }
 
 function findDish(id) {
@@ -1114,7 +1210,6 @@ function renderOrder() {
         <button type="button" class="btn-soft" id="btn-save-order">写入旅记</button>
         <button type="button" class="btn-primary" id="btn-done-order">点完了</button>
       </div>
-      ${zenCredit()}
     </div>
   `;
 }
@@ -1192,10 +1287,10 @@ function renderReceipt() {
       <div class="shopping-list bill-sheet" id="shopping-list-card">
         <div class="bill-perforation" aria-hidden="true"></div>
         <div class="sl-head">
-          <p class="sl-kicker">GUEST CHECK · 点单卡</p>
+          <p class="sl-kicker">点单卡 · FOR THE TABLE</p>
           <h2 class="sl-title">${escapeHtml(r.restaurant_name)}</h2>
-          <p class="sl-sub">No. ${String(r.createdAt).slice(-6)} · ${formatTime(r.createdAt)}</p>
-          <p class="sl-hint">Please prepare the following · 请按下列菜品准备</p>
+          <p class="sl-sub">${formatTime(r.createdAt)} · 编号 ${String(r.createdAt).slice(-6)}</p>
+          <p class="sl-hint">请按下列菜品为客人准备</p>
         </div>
         <div class="bill-table-head" aria-hidden="true">
           <span>#</span><span>ITEM</span><span>QTY</span><span>AMT</span>
@@ -1304,7 +1399,6 @@ function renderHistory() {
               还没有写下任何一餐<br/>点完菜之后，会留在这里
             </div>`
       }
-      ${zenCredit()}
     </div>
   `;
 }
@@ -1371,7 +1465,6 @@ function renderHistoryDetail() {
         </div>
         <strong class="sum-orig">${formatMoney(h.total_orig, cur)}</strong>
       </div>
-      ${zenCredit()}
     </div>
   `;
 }
@@ -1403,6 +1496,33 @@ function escapeHtml(s) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// —— Cart sheet bindings ——
+document.getElementById('cart-sheet')?.addEventListener('click', (e) => {
+  const t = e.target;
+  if (!(t instanceof Element)) return;
+  if (t.closest('[data-close-sheet]')) {
+    closeCartSheet();
+    return;
+  }
+  const plus = t.closest('[data-sheet-plus]');
+  if (plus) {
+    const id = plus.getAttribute('data-sheet-plus');
+    const cur = state.cart[id];
+    if (cur) setQty(id, cur.qty + 1);
+    return;
+  }
+  const minus = t.closest('[data-sheet-minus]');
+  if (minus) {
+    const id = minus.getAttribute('data-sheet-minus');
+    const cur = state.cart[id];
+    if (cur) setQty(id, cur.qty - 1);
+  }
+});
+document.getElementById('cart-sheet-checkout')?.addEventListener('click', () => {
+  closeCartSheet();
+  checkout();
+});
 
 // —— Global bindings ——
 document.getElementById('btn-home')?.addEventListener('click', goHome);

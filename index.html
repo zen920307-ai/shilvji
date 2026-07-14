@@ -57,6 +57,10 @@
 
       <main id="main" class="main"></main>
 
+      <footer class="app-foot" id="app-foot">
+        <em>DESIGN BY ZEN</em> · 食旅集
+      </footer>
+
       <div id="cart-bar" class="cart-bar hidden" aria-live="polite">
         <div class="cart-bar-inner">
           <div class="cart-info">
@@ -74,6 +78,29 @@
             </div>
           </div>
           <button type="button" id="btn-checkout" class="btn-primary cart-confirm">生成点单卡</button>
+        </div>
+      </div>
+
+      <!-- 已点清单 · 底部弹层 -->
+      <div id="cart-sheet" class="cart-sheet hidden" aria-hidden="true">
+        <div class="cart-sheet-backdrop" data-close-sheet></div>
+        <div class="cart-sheet-panel" role="dialog" aria-labelledby="cart-sheet-title">
+          <div class="cart-sheet-handle" aria-hidden="true"></div>
+          <div class="cart-sheet-head">
+            <div>
+              <p class="cart-sheet-kicker">已点内容</p>
+              <h3 id="cart-sheet-title">点单清单</h3>
+            </div>
+            <button type="button" class="cart-sheet-close" data-close-sheet aria-label="关闭">×</button>
+          </div>
+          <div id="cart-sheet-list" class="cart-sheet-list"></div>
+          <div class="cart-sheet-foot">
+            <div class="cart-sheet-sum">
+              <span id="cart-sheet-count">0 份</span>
+              <strong id="cart-sheet-total">—</strong>
+            </div>
+            <button type="button" class="btn-primary" id="cart-sheet-checkout">生成点单卡</button>
+          </div>
         </div>
       </div>
     </div>

@@ -28,13 +28,14 @@
   --shadow-soft: 0 10px 32px rgba(44, 41, 36, 0.06);
   --shadow-card: 0 4px 16px rgba(44, 41, 36, 0.04);
   --shadow-float: 0 12px 32px rgba(44, 41, 36, 0.08);
-  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-b: 0px;
   --safe-t: env(safe-area-inset-top, 0px);
   --cart-h: 56px;
   --app-chrome-h: calc(88px + var(--safe-t));
   --analyze-h: 100px;
-  /* 仅在真有底部安全区时占用；否则为 0，贴合物理底边 */
-  --pad-b: env(safe-area-inset-bottom, 0px);
+  /* 彻底贴底：不使用 safe-area 垫高 */
+  --pad-b: 0px;
+  --app-foot-h: 36px;
   --font: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
   --serif: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -215,18 +216,27 @@ body {
 }
 
 .zen-footer {
-  margin-top: 16px;
-  padding: 12px 0 4px;
-  border-top: 1px solid var(--line);
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  color: var(--ink-faint);
+  display: none; /* 统一用 app-foot 固定底栏 */
 }
 
-.zen-footer em {
+/* 固定在应用底部的署名 */
+.app-foot {
+  flex-shrink: 0;
+  height: var(--app-foot-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  z-index: 40;
+}
+
+.app-foot em {
   font-style: normal;
   color: var(--accent-deep);
 }
@@ -358,12 +368,11 @@ body {
 }
 
 /* ─── Main scroll ─── */
-/* 底栏 position:fixed 贴屏幕底；内容区不预留大块空白 */
 .main {
   flex: 1;
   min-height: 0;
   padding: 0;
-  padding-bottom: calc(8px + var(--pad-b));
+  padding-bottom: 8px;
   background: transparent;
   overflow-x: hidden;
   overflow-y: auto;
@@ -371,14 +380,13 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* 首页：只留能露出最后一行内容的最小空隙（≈底栏高度），禁止大块空白 */
+/* 首页底栏浮层：仅留最小内容空隙，禁止大块留白 */
 body[data-view='capture'] .main {
-  padding-bottom: calc(96px + var(--pad-b));
+  padding-bottom: 96px;
 }
 
-/* 点单有购物车时：最小空隙让最后一张菜卡可滑到底栏上方 */
 body[data-view='menu'] .main.has-cart {
-  padding-bottom: calc(56px + var(--pad-b));
+  padding-bottom: 56px;
 }
 
 /* ─── Home hero · full-bleed literary banner ─── */
@@ -858,9 +866,9 @@ body[data-view='menu'] .main.has-cart {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px 0;
-  /* 只跟安全区，绝不额外垫高导致「底栏悬空」 */
-  padding-bottom: var(--pad-b);
+  padding: 10px 12px 10px;
+  /* 纯粹贴底，无 safe-area */
+  padding-bottom: 10px;
   background: var(--bg);
   border-top: 1px solid var(--line);
   box-shadow: none;
@@ -1147,18 +1155,25 @@ body[data-view='menu'] .main.has-cart {
   padding-bottom: 8px;
 }
 
+/* 全局统一返回：位置 / 左对齐一致 */
 .back-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  margin: 14px 20px 0;
-  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 16px 6px;
   border: none;
   background: none;
   color: var(--ink-dim);
   font-family: var(--font);
   font-size: 0.82rem;
+  font-weight: 400;
   cursor: pointer;
   letter-spacing: 0.02em;
+  text-align: left;
+  line-height: 1.4;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .back-link:active {
@@ -1166,17 +1181,65 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .menu-header {
-  padding: 12px 20px 16px;
+  padding: 4px 16px 14px;
+}
+
+.menu-title-input {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  font-family: var(--serif);
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  color: var(--ink);
+  outline: none;
+}
+
+.menu-title-input:focus {
+  border-bottom-color: var(--accent-soft);
+}
+
+.menu-title-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.menu-meta-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-meta-left {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+}
+
+.menu-meta-right {
+  margin: 0;
+  flex-shrink: 0;
+  max-width: 46%;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--accent-deep);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 .menu-kicker {
-  margin: 0 0 8px;
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  color: var(--accent-deep);
-  text-transform: uppercase;
+  display: none;
 }
 
 .menu-header h2 {
@@ -1195,7 +1258,10 @@ body[data-view='menu'] .main.has-cart {
   font-size: 0.62rem;
   color: var(--ink-faint);
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+}
+
+.menu-fx {
+  display: none;
 }
 
 .cat-scroll {
@@ -1326,6 +1392,20 @@ body[data-view='menu'] .main.has-cart {
   }
 }
 
+.dish-img-hit {
+  position: relative;
+  width: 96px;
+  min-height: 108px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-right: 1px solid var(--line);
+  background: var(--bg-mute);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+
 .dish-img,
 .dish-img-fallback {
   width: 96px;
@@ -1334,6 +1414,11 @@ body[data-view='menu'] .main.has-cart {
   object-fit: cover;
   background: var(--bg-mute);
   display: block;
+  pointer-events: none;
+}
+
+.dish-img-hit:active {
+  opacity: 0.88;
 }
 
 .dish-img-fallback {
@@ -1481,7 +1566,8 @@ body[data-view='menu'] .main.has-cart {
   max-width: 480px;
   z-index: 50;
   padding: 0;
-  padding-bottom: var(--pad-b);
+  /* 纯粹贴底，无 safe-area */
+  padding-bottom: 0;
   background: rgba(255, 252, 247, 0.98);
   border-top: 1px solid var(--line);
   pointer-events: none;
@@ -1603,7 +1689,16 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .order-head {
-  padding: 8px 20px 12px;
+  padding: 4px 16px 12px;
+}
+
+.history-page {
+  padding: 0 0 16px;
+}
+
+.history-page h2,
+.order-page h2 {
+  padding: 0;
 }
 
 .order-page h2,
@@ -1773,64 +1868,63 @@ body[data-view='menu'] .main.has-cart {
   width: 100%;
 }
 
-/* Receipt · guest check / bill sheet */
+/* Receipt · 文艺点单卡 */
 .receipt-page {
-  padding: 10px 14px 24px;
-  /* 页面底比小票更深一点，形成色差 */
-  background:
-    linear-gradient(180deg, rgba(107, 101, 96, 0.06), transparent 40%),
-    #ebe6dc;
+  padding: 0 16px 20px;
+  background: var(--bg);
 }
 
 .shopping-list.bill-sheet {
-  --card-paper: #fffdf8;
-  --card-ink: #1a1814;
-  --card-muted: #6b6560;
-  --card-line: #d2c9b8;
-  --card-accent: #5f6250;
+  --card-paper: #fffcf6;
+  --card-ink: #2a2620;
+  --card-muted: #7a746a;
+  --card-line: #e0d8c8;
+  --card-accent: #7a7d66;
   position: relative;
   margin: 0;
   padding: 0;
-  border: 1px solid #b8ae9a;
+  border: 1px solid #d8d0c0;
   background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 27px,
-      rgba(143, 145, 120, 0.035) 27px,
-      rgba(143, 145, 120, 0.035) 28px
-    ),
+    radial-gradient(ellipse at 50% 0%, rgba(143, 145, 120, 0.07), transparent 55%),
     var(--card-paper);
   color: var(--card-ink);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.7) inset,
-    0 14px 32px rgba(44, 41, 36, 0.12);
+  box-shadow: 0 10px 28px rgba(44, 41, 36, 0.06);
   overflow: hidden;
 }
 
 .shopping-list.bill-sheet::before {
-  display: none;
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(200, 192, 176, 0.55);
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* 齿孔装饰：贴合小票上下边，更大一号 */
+.shopping-list.bill-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 齿孔装饰：贴合小票上下边 */
 .bill-perforation {
-  height: 18px;
+  height: 20px;
   margin: 0;
   background:
-    radial-gradient(circle at 10px 50%, #ebe6dc 4px, transparent 4.5px) 0 0 / 20px 18px repeat-x,
-    linear-gradient(180deg, #e4ddd0, #f0ebe1);
+    radial-gradient(circle at 11px 50%, var(--bg) 4.5px, transparent 5px) 0 0 / 22px 20px repeat-x,
+    linear-gradient(180deg, #f0ebe3, #faf6ee);
   border-bottom: 1px dashed var(--card-line);
   opacity: 1;
 }
 
 .bill-perforation.bottom {
-  height: 18px;
+  height: 20px;
   margin: 0;
   border-bottom: none;
   border-top: 1px dashed var(--card-line);
   background:
-    radial-gradient(circle at 10px 50%, #ebe6dc 4px, transparent 4.5px) 0 0 / 20px 18px repeat-x,
-    linear-gradient(0deg, #e4ddd0, #f0ebe1);
+    radial-gradient(circle at 11px 50%, var(--bg) 4.5px, transparent 5px) 0 0 / 22px 20px repeat-x,
+    linear-gradient(0deg, #f0ebe3, #faf6ee);
 }
 
 .sl-head {
@@ -2345,4 +2439,172 @@ body[data-view='menu'] .main.has-cart {
 
 .hidden {
   display: none !important;
+}
+
+/* ─── Cart sheet · 底部已点弹层 ─── */
+.cart-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.cart-sheet.hidden {
+  display: none;
+}
+
+.cart-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(44, 41, 36, 0.28);
+  animation: fade-in 0.2s ease both;
+}
+
+.cart-sheet-panel {
+  position: relative;
+  width: 100%;
+  max-height: min(72vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 32px rgba(44, 41, 36, 0.1);
+  animation: soft-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 1;
+}
+
+.cart-sheet-handle {
+  width: 36px;
+  height: 3px;
+  margin: 10px auto 0;
+  background: var(--line-hard);
+}
+
+.cart-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart-sheet-kicker {
+  margin: 0 0 4px;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  color: var(--accent-deep);
+  text-transform: uppercase;
+}
+
+.cart-sheet-head h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.cart-sheet-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--ink-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.cart-sheet-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.cart-sheet-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cart-sheet-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.cart-sheet-sub {
+  margin: 3px 0 0;
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.cart-sheet-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.cart-sheet-price {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-deep);
+}
+
+.cart-sheet-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.cart-sheet-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cart-sheet-sum span {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--ink-faint);
+}
+
+.cart-sheet-sum strong {
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.cart-sheet-foot .btn-primary {
+  flex-shrink: 0;
+  min-width: 120px;
+  min-height: 44px;
+}
+
+.sl-head {
+  padding: 16px 22px 14px;
+}
+
+.sl-title {
+  font-family: var(--serif);
 }
