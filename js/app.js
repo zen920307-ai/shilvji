@@ -408,7 +408,15 @@ function refreshDishCard(dishId) {
     render();
     return;
   }
-  el.outerHTML = renderDishCard(dish);
+  // 就地替换，避免列表重入场动画闪动
+  const html = renderDishCard(dish);
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html.trim();
+  const next = wrap.firstElementChild;
+  if (next) {
+    next.style.animation = 'none';
+    el.replaceWith(next);
+  }
 }
 
 function checkout() {
@@ -950,7 +958,7 @@ function renderMenu() {
           )
           .join('')}
       </div>
-      <div class="dish-list" id="dish-list">
+      <div class="dish-list enter-anim" id="dish-list">
         ${(cat?.items || []).map((d) => renderDishCard(d)).join('')}
       </div>
       ${zenCredit('分门别类')}
@@ -982,7 +990,9 @@ function switchCategory(index) {
 
   const list = document.getElementById('dish-list');
   if (list) {
+    list.classList.remove('enter-anim');
     list.innerHTML = (cat?.items || []).map((d) => renderDishCard(d)).join('');
+    // 切换分类时不再播入场动画，避免闪动
   }
 
   // inline: nearest —— 已在视野内则不动，被裁切时才微调
@@ -1038,6 +1048,26 @@ function findDish(id) {
   return null;
 }
 
+function setOrderQty(dishId, qty) {
+  const i = state.orderItems.findIndex((x) => x.dish.id === dishId);
+  if (i < 0) return;
+  if (qty <= 0) {
+    state.orderItems.splice(i, 1);
+    delete state.cart[dishId];
+    if (!state.orderItems.length) {
+      state.view = 'menu';
+      toast('这一页又空了');
+    }
+  } else {
+    state.orderItems[i].qty = qty;
+    if (state.cart[dishId]) state.cart[dishId].qty = qty;
+    else if (state.orderItems[i].dish) {
+      state.cart[dishId] = { dish: state.orderItems[i].dish, qty };
+    }
+  }
+  render();
+}
+
 function renderOrder() {
   const items = state.orderItems;
   const { totalCny, totalOrig, count } = orderTotals(items);
@@ -1050,17 +1080,21 @@ function renderOrder() {
         <h2>核对清单</h2>
       </div>
       <p class="order-tip">
-        确认无误后点「点完了」· 生成一张清雅的 <strong>菜单卡</strong> 递给服务员
+        可调整每道菜的数量 · 确认后生成 <strong>菜单卡</strong> 递给服务员
       </p>
       ${items
         .map(
           ({ dish, qty }) => `
-        <div class="order-card">
+        <div class="order-card" data-order-id="${dish.id}">
           <button type="button" class="order-card-del" data-rm="${dish.id}" aria-label="删除">×</button>
           <p class="order-card-orig">${escapeHtml(dish.name_original)}</p>
           <p class="order-card-zh">${escapeHtml(dish.name_zh)}</p>
           <div class="order-card-meta">
-            <span>× ${qty}</span>
+            <div class="qty-ctrl order-qty">
+              <button type="button" data-order-minus="${dish.id}" aria-label="减少">−</button>
+              <span>${qty}</span>
+              <button type="button" data-order-plus="${dish.id}" aria-label="增加">+</button>
+            </div>
             <span class="price-stack">
               <strong class="price-orig">${dish.price != null ? formatMoney(dish.price * qty, cur) : '—'}</strong>
               ${dish.price_cny != null ? `<em class="price-cny-soft">约 ¥${(dish.price_cny * qty).toFixed(2)}</em>` : ''}
@@ -1092,6 +1126,22 @@ function bindOrder() {
   });
   document.querySelectorAll('[data-rm]').forEach((btn) => {
     btn.addEventListener('click', () => removeOrderItem(btn.getAttribute('data-rm')));
+  });
+  document.querySelectorAll('[data-order-plus]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-order-plus');
+      const cur = state.orderItems.find((x) => x.dish.id === id);
+      if (cur) setOrderQty(id, cur.qty + 1);
+    });
+  });
+  document.querySelectorAll('[data-order-minus]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-order-minus');
+      const cur = state.orderItems.find((x) => x.dish.id === id);
+      if (cur) setOrderQty(id, cur.qty - 1);
+    });
   });
   document.getElementById('btn-save-order')?.addEventListener('click', () => {
     saveCurrentOrder();

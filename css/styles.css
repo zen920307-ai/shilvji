@@ -281,22 +281,32 @@ body {
 /* 弱化提示：写在「食旅集」标题后 */
 .brand-hint {
   font-family: var(--font);
-  font-size: 0.66rem;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  color: var(--ink-faint);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--accent-deep);
   opacity: 0;
   max-width: 0;
+  max-height: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  transition: opacity 0.28s ease, max-width 0.28s ease;
   line-height: 1.2;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: opacity 0.2s ease, max-width 0.2s ease, padding 0.2s ease, background 0.2s ease;
+  vertical-align: middle;
 }
 
 .brand-hint.show {
-  opacity: 0.65;
-  max-width: min(11.5em, 42vw);
+  opacity: 1;
+  max-width: min(13em, 46vw);
+  max-height: 2em;
+  padding: 3px 8px;
+  background: rgba(143, 145, 120, 0.18);
+  border-color: rgba(143, 145, 120, 0.28);
+  color: var(--accent-deep);
 }
 
 .brand-sub {
@@ -348,12 +358,12 @@ body {
 }
 
 /* ─── Main scroll ─── */
-/* 默认不预留购物车高度，避免每页底部大片空 */
+/* 底栏 position:fixed 贴屏幕底；内容区不预留大块空白 */
 .main {
   flex: 1;
   min-height: 0;
   padding: 0;
-  padding-bottom: calc(16px + var(--pad-b));
+  padding-bottom: calc(8px + var(--pad-b));
   background: transparent;
   overflow-x: hidden;
   overflow-y: auto;
@@ -361,17 +371,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* 首页：只留能露出最后一行内容的最小空隙（≈底栏高度），禁止大块空白 */
 body[data-view='capture'] .main {
-  padding-bottom: calc(var(--analyze-h) + var(--pad-b));
+  padding-bottom: calc(96px + var(--pad-b));
 }
 
-body[data-view='menu'] .main {
-  padding-bottom: calc(20px + var(--pad-b));
-}
-
-/* 点单页显示购物车时：仅预留实测底栏高度 */
+/* 点单有购物车时：最小空隙让最后一张菜卡可滑到底栏上方 */
 body[data-view='menu'] .main.has-cart {
-  padding-bottom: calc(var(--cart-h) + var(--pad-b));
+  padding-bottom: calc(56px + var(--pad-b));
 }
 
 /* ─── Home hero · full-bleed literary banner ─── */
@@ -838,7 +845,7 @@ body[data-view='menu'] .main.has-cart {
   border-radius: 50%;
 }
 
-/* Bottom analyze bar · 贴合屏幕底边（仅加真实 safe-area） */
+/* Bottom analyze bar · 真正贴屏幕底 */
 .analyze-wrap {
   position: fixed;
   left: 50%;
@@ -850,8 +857,9 @@ body[data-view='menu'] .main.has-cart {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px 0;
+  gap: 8px;
+  padding: 10px 12px 0;
+  /* 只跟安全区，绝不额外垫高导致「底栏悬空」 */
   padding-bottom: var(--pad-b);
   background: var(--bg);
   border-top: 1px solid var(--line);
@@ -860,13 +868,13 @@ body[data-view='menu'] .main.has-cart {
 
 .analyze-wrap .btn-primary {
   width: 100%;
-  min-height: 46px;
-  font-size: 0.88rem;
+  min-height: 52px;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 11px 14px;
+  padding: 14px 16px;
 }
 
 .analyze-wrap .btn-primary .btn-ico {
@@ -877,9 +885,9 @@ body[data-view='menu'] .main.has-cart {
 
 .analyze-wrap .btn-soft {
   width: 100%;
-  min-height: 38px;
-  padding: 9px 12px;
-  margin-bottom: 6px;
+  min-height: 44px;
+  padding: 12px 14px;
+  margin-bottom: 0;
 }
 
 .tip-chip {
@@ -1291,14 +1299,20 @@ body[data-view='menu'] .main.has-cart {
   border: 1px solid var(--line);
   overflow: hidden;
   box-shadow: none;
-  animation: soft-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: background 0.25s ease;
+  /* 加减数量时 outerHTML 替换：禁止入场动画闪动 */
+  animation: none;
+  transition: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .dish-card:hover {
     background: var(--bg-elev);
   }
+}
+
+/* 仅首次进入列表时轻微出现，后续数量变更不闪 */
+.dish-list.enter-anim .dish-card {
+  animation: soft-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes rise {
@@ -1457,7 +1471,7 @@ body[data-view='menu'] .main.has-cart {
   background: var(--bg-elev);
 }
 
-/* Cart · 贴底 · 浅色条，完整显示 */
+/* Cart · 贴屏幕最底部，不预留大块空白 */
 .cart-bar {
   position: fixed;
   left: 50%;
@@ -1622,6 +1636,7 @@ body[data-view='menu'] .main.has-cart {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
+  animation: none;
 }
 
 .order-card::before {
@@ -1658,9 +1673,15 @@ body[data-view='menu'] .main.has-cart {
   border-top: 1px dashed var(--line);
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   font-family: var(--mono);
   font-size: 0.72rem;
   color: var(--ink-dim);
+}
+
+.order-qty {
+  flex-shrink: 0;
 }
 
 .order-card-del {
@@ -1754,31 +1775,36 @@ body[data-view='menu'] .main.has-cart {
 
 /* Receipt · guest check / bill sheet */
 .receipt-page {
-  padding: 4px 12px 20px;
-  background: transparent;
+  padding: 10px 14px 24px;
+  /* 页面底比小票更深一点，形成色差 */
+  background:
+    linear-gradient(180deg, rgba(107, 101, 96, 0.06), transparent 40%),
+    #ebe6dc;
 }
 
 .shopping-list.bill-sheet {
-  --card-paper: #fbf8f1;
-  --card-ink: #1f1c18;
+  --card-paper: #fffdf8;
+  --card-ink: #1a1814;
   --card-muted: #6b6560;
-  --card-line: #d8d0c2;
+  --card-line: #d2c9b8;
   --card-accent: #5f6250;
   position: relative;
   margin: 0;
-  padding: 0 0 8px;
-  border: 1px solid #cfc6b6;
+  padding: 0;
+  border: 1px solid #b8ae9a;
   background:
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 27px,
-      rgba(143, 145, 120, 0.04) 27px,
-      rgba(143, 145, 120, 0.04) 28px
+      rgba(143, 145, 120, 0.035) 27px,
+      rgba(143, 145, 120, 0.035) 28px
     ),
     var(--card-paper);
   color: var(--card-ink);
-  box-shadow: 0 12px 28px rgba(44, 41, 36, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 14px 32px rgba(44, 41, 36, 0.12);
   overflow: hidden;
 }
 
@@ -1786,18 +1812,25 @@ body[data-view='menu'] .main.has-cart {
   display: none;
 }
 
+/* 齿孔装饰：贴合小票上下边，更大一号 */
 .bill-perforation {
-  height: 10px;
+  height: 18px;
+  margin: 0;
   background:
-    radial-gradient(circle at 8px 50%, transparent 3px, #e8e2d6 3.5px) 0 0 / 16px 10px repeat-x;
+    radial-gradient(circle at 10px 50%, #ebe6dc 4px, transparent 4.5px) 0 0 / 20px 18px repeat-x,
+    linear-gradient(180deg, #e4ddd0, #f0ebe1);
   border-bottom: 1px dashed var(--card-line);
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .bill-perforation.bottom {
+  height: 18px;
+  margin: 0;
   border-bottom: none;
   border-top: 1px dashed var(--card-line);
-  margin-top: 8px;
+  background:
+    radial-gradient(circle at 10px 50%, #ebe6dc 4px, transparent 4.5px) 0 0 / 20px 18px repeat-x,
+    linear-gradient(0deg, #e4ddd0, #f0ebe1);
 }
 
 .sl-head {
@@ -2011,7 +2044,7 @@ body[data-view='menu'] .main.has-cart {
 
 .sl-foot {
   margin: 0;
-  padding: 14px 16px 10px;
+  padding: 14px 16px 12px;
   text-align: center;
   font-family: var(--mono);
   font-size: 0.55rem;
