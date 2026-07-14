@@ -226,20 +226,53 @@ async function runApiTest() {
 }
 
 function setPipeline(stepId, note = '', meta = {}) {
-  // 任务已终止则不再刷新 loading
-  if (state.view !== 'loading' && state.view !== 'menu') {
-    /* allow other views */
-  }
   state.pipeline = { stepId, note, meta };
-  if (state.view === 'loading') {
-    // 局部更新 loading UI，避免整页闪烁
-    const root = document.getElementById('pipeline-root');
-    if (root) {
-      root.outerHTML = renderPipeline();
-    } else {
-      render();
-    }
+  if (state.view !== 'loading') return;
+
+  // 只更新文案 / 进度 / 步骤，绝不替换动画节点（否则 CSS 动画会被重置）
+  const currentIdx = Math.max(
+    0,
+    PIPELINE_STEPS.findIndex((s) => s.id === state.pipeline.stepId),
+  );
+  const current = PIPELINE_STEPS[currentIdx] || PIPELINE_STEPS[0];
+  const pct = Math.round(
+    ((currentIdx + (state.pipeline.stepId === 'done' ? 1 : 0.45)) / PIPELINE_STEPS.length) * 100,
+  );
+
+  const kicker = document.getElementById('pipeline-kicker');
+  const title = document.getElementById('pipeline-title');
+  const en = document.getElementById('pipeline-en');
+  const noteEl = document.getElementById('pipeline-note');
+  const fill = document.getElementById('pipeline-bar-fill');
+  const pctEl = document.getElementById('pipeline-pct');
+  const steps = document.getElementById('pipeline-steps');
+
+  if (!kicker || !title || !steps) {
+    render();
+    return;
   }
+
+  kicker.textContent = `STEP ${String(currentIdx + 1).padStart(2, '0')} / ${String(PIPELINE_STEPS.length).padStart(2, '0')}`;
+  title.textContent = current.label;
+  if (en) en.textContent = current.en;
+  if (noteEl) noteEl.textContent = state.pipeline.note || current.detail;
+  if (fill) fill.style.width = `${Math.min(100, pct)}%`;
+  if (pctEl) pctEl.textContent = `${Math.min(100, pct)}%`;
+
+  steps.innerHTML = PIPELINE_STEPS.map((s, i) => {
+    let st = 'todo';
+    if (i < currentIdx) st = 'done';
+    else if (i === currentIdx) st = state.pipeline.stepId === 'done' ? 'done' : 'active';
+    return `
+      <li class="pipeline-step ${st}">
+        <span class="ps-idx">${String(i + 1).padStart(2, '0')}</span>
+        <span class="ps-body">
+          <span class="ps-label">${escapeHtml(s.label)}</span>
+          <span class="ps-en">${escapeHtml(s.en)} · ${escapeHtml(s.detail)}</span>
+        </span>
+        <span class="ps-mark">${st === 'done' ? '✓' : st === 'active' ? '●' : '○'}</span>
+      </li>`;
+  }).join('');
 }
 
 function cartStats() {
@@ -1060,6 +1093,57 @@ async function loadDemoMenu() {
   render();
 }
 
+/** 西餐向加载动效：线描鼠尾草绿，与全站配色一致 */
+function renderFoodLoader() {
+  const c = 'var(--accent-deep)';
+  return `
+    <div class="pipeline-food" id="pipeline-food" aria-hidden="true">
+      <div class="food-orbit">
+        <div class="food-orbit-ring r1"></div>
+        <div class="food-orbit-ring r2"></div>
+      </div>
+      <div class="food-carousel">
+        <div class="food-slide food-slide-1">
+          <svg class="food-svg" viewBox="0 0 96 96" fill="none">
+            <ellipse cx="48" cy="76" rx="26" ry="4" stroke="${c}" stroke-width="1.4" opacity="0.25"/>
+            <path class="burger-top" d="M24 50c0-13 11-22 24-22s24 9 24 22" stroke="${c}" stroke-width="2" fill="none"/>
+            <path class="burger-patty" d="M22 50h52" stroke="${c}" stroke-width="5" stroke-linecap="round"/>
+            <path class="burger-leaf" d="M24 56h48" stroke="${c}" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+            <path class="burger-bot" d="M24 62c2 10 10 16 24 16s22-6 24-16" stroke="${c}" stroke-width="2" fill="none"/>
+            <circle class="burger-seed s1" cx="36" cy="36" r="1.5" fill="${c}"/>
+            <circle class="burger-seed s2" cx="48" cy="32" r="1.4" fill="${c}"/>
+            <circle class="burger-seed s3" cx="58" cy="37" r="1.5" fill="${c}"/>
+          </svg>
+        </div>
+        <div class="food-slide food-slide-2">
+          <svg class="food-svg" viewBox="0 0 96 96" fill="none">
+            <ellipse class="pasta-plate" cx="48" cy="58" rx="30" ry="20" stroke="${c}" stroke-width="2"/>
+            <path class="pasta-line a" d="M28 54c8 8 12-4 20 2s12-2 18 6" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+            <path class="pasta-line b" d="M26 60c10 6 14-4 24 2s12 0 18 4" stroke="${c}" stroke-width="1.8" stroke-linecap="round" opacity="0.75"/>
+            <path class="pasta-line c" d="M32 48c7 5 10-3 16 2s10-2 14 3" stroke="${c}" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+            <circle class="pasta-dot d1" cx="42" cy="50" r="2.2" fill="${c}"/>
+            <circle class="pasta-dot d2" cx="56" cy="54" r="1.8" fill="${c}" opacity="0.7"/>
+            <path class="pasta-fork" d="M70 22v18M66 22v12M74 22v12M70 40v22" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="food-slide food-slide-3">
+          <svg class="food-svg" viewBox="0 0 96 96" fill="none">
+            <ellipse cx="48" cy="82" rx="20" ry="3.5" stroke="${c}" stroke-width="1.2" opacity="0.3"/>
+            <g class="cutlery-fork">
+              <path d="M30 18v20M36 18v20M42 18v20" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+              <path d="M30 38h12M36 38v40" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <g class="cutlery-knife">
+              <path d="M62 20c8 12 8 26 0 38" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+              <path d="M62 58v24M56 58h12" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderPipeline() {
   const currentIdx = Math.max(
     0,
@@ -1073,62 +1157,21 @@ function renderPipeline() {
   return `
     <div id="pipeline-root" class="pipeline-root">
       <div class="pipeline-hero">
-        <div class="pipeline-food" aria-hidden="true">
-          <div class="food-carousel">
-            <div class="food-slide food-slide-1">
-              <svg viewBox="0 0 96 96" class="food-svg">
-                <ellipse cx="48" cy="74" rx="30" ry="5.5" fill="rgba(143,145,120,0.14)"/>
-                <path d="M20 48c0-15 13-26 28-26s28 11 28 26" fill="#e8d5a8" stroke="#b89b5e" stroke-width="1.6"/>
-                <rect x="20" y="48" width="56" height="8" fill="#6f725c"/>
-                <rect x="22" y="56" width="52" height="5" fill="#c47a6a"/>
-                <path d="M20 61h56c0 8-12 14-28 14S20 69 20 61z" fill="#d4a574" stroke="#b8894e" stroke-width="1.2"/>
-                <circle cx="34" cy="34" r="1.8" fill="#8a6a3a"/>
-                <circle cx="48" cy="30" r="1.6" fill="#8a6a3a"/>
-                <circle cx="61" cy="36" r="1.7" fill="#8a6a3a"/>
-              </svg>
-            </div>
-            <div class="food-slide food-slide-2">
-              <svg viewBox="0 0 96 96" class="food-svg">
-                <ellipse cx="48" cy="60" rx="34" ry="24" fill="#f3efe6" stroke="#c4b8a0" stroke-width="2.2"/>
-                <ellipse cx="48" cy="58" rx="26" ry="16" fill="rgba(201,160,90,0.28)"/>
-                <path class="pasta-swirl a" d="M30 54c9 7 13-4 22 2s13-2 20 5" stroke="#c9a05a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
-                <path class="pasta-swirl b" d="M28 60c11 6 15-3 24 2s13-1 18 4" stroke="#b8894e" stroke-width="2" fill="none" stroke-linecap="round"/>
-                <path class="pasta-swirl c" d="M34 50c7 5 11-2 16 2s9-2 14 3" stroke="#d4b06a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-                <circle cx="42" cy="52" r="2.8" fill="#7a9a72"/>
-                <circle cx="56" cy="56" r="2.3" fill="#c47a6a"/>
-              </svg>
-            </div>
-            <div class="food-slide food-slide-3">
-              <svg viewBox="0 0 96 96" class="food-svg">
-                <ellipse cx="48" cy="80" rx="24" ry="4.5" fill="rgba(143,145,120,0.14)"/>
-                <g class="cutlery-fork" stroke="#6f725c" stroke-width="2.2" stroke-linecap="round" fill="none">
-                  <path d="M28 16v22M35 16v22M42 16v22"/>
-                  <path d="M28 38h14"/>
-                  <path d="M35 38v40"/>
-                </g>
-                <g class="cutlery-knife" stroke="#6f725c" stroke-width="2.2" stroke-linecap="round" fill="none">
-                  <path d="M62 18c9 12 9 26 0 38"/>
-                  <path d="M62 56v24"/>
-                  <path d="M55 56h14"/>
-                </g>
-              </svg>
-            </div>
-          </div>
-        </div>
+        ${renderFoodLoader()}
         <div class="pipeline-hero-text">
-          <p class="pipeline-kicker">STEP ${String(currentIdx + 1).padStart(2, '0')} / ${String(PIPELINE_STEPS.length).padStart(2, '0')}</p>
-          <h2 class="pipeline-title">${escapeHtml(current.label)}</h2>
-          <p class="pipeline-en">${escapeHtml(current.en)}</p>
-          <p class="pipeline-note">${escapeHtml(state.pipeline.note || current.detail)}</p>
+          <p class="pipeline-kicker" id="pipeline-kicker">STEP ${String(currentIdx + 1).padStart(2, '0')} / ${String(PIPELINE_STEPS.length).padStart(2, '0')}</p>
+          <h2 class="pipeline-title" id="pipeline-title">${escapeHtml(current.label)}</h2>
+          <p class="pipeline-en" id="pipeline-en">${escapeHtml(current.en)}</p>
+          <p class="pipeline-note" id="pipeline-note">${escapeHtml(state.pipeline.note || current.detail)}</p>
         </div>
       </div>
       <div class="pipeline-bar-wrap">
         <div class="pipeline-bar">
-          <div class="pipeline-bar-fill" style="width:${Math.min(100, pct)}%"></div>
+          <div class="pipeline-bar-fill" id="pipeline-bar-fill" style="width:${Math.min(100, pct)}%"></div>
         </div>
-        <span class="pipeline-pct">${Math.min(100, pct)}%</span>
+        <span class="pipeline-pct" id="pipeline-pct">${Math.min(100, pct)}%</span>
       </div>
-      <ol class="pipeline-steps">
+      <ol class="pipeline-steps" id="pipeline-steps">
         ${PIPELINE_STEPS.map((s, i) => {
           let st = 'todo';
           if (i < currentIdx) st = 'done';

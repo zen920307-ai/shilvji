@@ -1033,21 +1033,49 @@ body[data-view='menu'] .main.has-cart {
   align-items: center;
 }
 
-/* 餐饮加载动画：汉堡 / 意面 / 刀叉 轮播 */
+/* 餐饮加载动画：鼠尾草绿线描 · 汉堡/意面/刀叉 · 强动效 · 不随步骤刷新 */
 .pipeline-food {
   position: relative;
-  width: 108px;
-  height: 108px;
+  width: 112px;
+  height: 112px;
   flex-shrink: 0;
+  color: var(--accent-deep);
+}
+
+.food-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.food-orbit-ring {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(143, 145, 120, 0.22);
+  border-radius: 50% !important;
+  animation: food-spin 8s linear infinite;
+}
+
+.food-orbit-ring.r2 {
+  inset: 16px;
+  border-style: dashed;
+  opacity: 0.7;
+  animation-direction: reverse;
+  animation-duration: 11s;
 }
 
 .food-carousel {
   position: relative;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 50% 55%, rgba(143, 145, 120, 0.14), transparent 68%);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(143, 145, 120, 0.1) 0%,
+    transparent 70%
+  );
   border-radius: 50% !important;
-  overflow: hidden;
 }
 
 .food-slide {
@@ -1056,114 +1084,244 @@ body[data-view='menu'] .main.has-cart {
   display: grid;
   place-items: center;
   opacity: 0;
-  transform: scale(0.9) translateY(8px);
+  transform: scale(0.82) rotate(-8deg);
   pointer-events: none;
 }
 
-/* 汉堡 → 意面 → 刀叉，约 6s 一轮，局部刷新不中断 */
+/* 每项约 2s 可见，切换干脆，全程不断重启动画 */
 .food-slide-1 {
-  animation: food-cycle-1 6s ease-in-out infinite;
+  animation: food-show-1 6s ease-in-out infinite;
 }
 .food-slide-2 {
-  animation: food-cycle-2 6s ease-in-out infinite;
+  animation: food-show-2 6s ease-in-out infinite;
 }
 .food-slide-3 {
-  animation: food-cycle-3 6s ease-in-out infinite;
+  animation: food-show-3 6s ease-in-out infinite;
 }
 
-@keyframes food-cycle-1 {
+@keyframes food-show-1 {
   0%,
-  26% {
+  28% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) rotate(0deg) translateY(0);
   }
-  32%,
+  33%,
   100% {
     opacity: 0;
-    transform: scale(0.9) translateY(8px);
+    transform: scale(0.82) rotate(10deg) translateY(10px);
   }
 }
 
-@keyframes food-cycle-2 {
+@keyframes food-show-2 {
   0%,
-  30% {
+  31% {
     opacity: 0;
-    transform: scale(0.9) translateY(8px);
+    transform: scale(0.82) rotate(-10deg) translateY(10px);
   }
   36%,
-  60% {
+  61% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) rotate(0deg) translateY(0);
   }
   66%,
   100% {
     opacity: 0;
-    transform: scale(0.9) translateY(8px);
+    transform: scale(0.82) rotate(10deg) translateY(10px);
   }
 }
 
-@keyframes food-cycle-3 {
+@keyframes food-show-3 {
   0%,
   64% {
     opacity: 0;
-    transform: scale(0.9) translateY(8px);
+    transform: scale(0.82) rotate(-10deg) translateY(10px);
   }
-  70%,
+  69%,
   94% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) rotate(0deg) translateY(0);
   }
   100% {
     opacity: 0;
-    transform: scale(0.9) translateY(8px);
+    transform: scale(0.82) rotate(10deg) translateY(10px);
   }
 }
 
 .food-svg {
-  width: 86px;
-  height: 86px;
+  width: 88px;
+  height: 88px;
   display: block;
   overflow: visible;
+  color: var(--accent-deep);
 }
 
-.pasta-swirl {
-  animation: pasta-swirl 2.2s ease-in-out infinite;
+/* 汉堡：上下夹心弹跳 */
+.burger-top {
+  animation: burger-top 1.2s ease-in-out infinite;
+  transform-origin: 48px 40px;
+}
+.burger-patty {
+  animation: burger-patty 1.2s ease-in-out infinite;
+}
+.burger-leaf {
+  animation: burger-leaf 1.2s ease-in-out infinite;
+}
+.burger-bot {
+  animation: burger-bot 1.2s ease-in-out infinite;
+  transform-origin: 48px 70px;
+}
+.burger-seed {
+  animation: seed-twinkle 1.4s ease-in-out infinite;
+}
+.burger-seed.s2 {
+  animation-delay: 0.2s;
+}
+.burger-seed.s3 {
+  animation-delay: 0.4s;
 }
 
-.pasta-swirl.b {
-  animation-delay: 0.15s;
+@keyframes burger-top {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
-.pasta-swirl.c {
-  animation-delay: 0.3s;
+@keyframes burger-patty {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.06);
+  }
 }
-
-.cutlery-fork {
-  animation: cutlery-float 2.4s ease-in-out infinite;
-  transform-origin: 36px 40px;
-}
-
-.cutlery-knife {
-  animation: cutlery-float 2.4s ease-in-out infinite reverse;
-  transform-origin: 60px 40px;
-}
-
-@keyframes pasta-swirl {
+@keyframes burger-leaf {
   0%,
   100% {
     transform: translateX(0);
   }
   50% {
-    transform: translateX(1.5px);
+    transform: translateX(2px);
+  }
+}
+@keyframes burger-bot {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+@keyframes seed-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
-@keyframes cutlery-float {
+/* 意面：线条流动 + 叉子轻转 */
+.pasta-line {
+  animation: pasta-flow 1.5s ease-in-out infinite;
+}
+.pasta-line.b {
+  animation-delay: 0.12s;
+}
+.pasta-line.c {
+  animation-delay: 0.24s;
+}
+.pasta-dot {
+  animation: pasta-dot 1.3s ease-in-out infinite;
+}
+.pasta-dot.d2 {
+  animation-delay: 0.2s;
+}
+.pasta-plate {
+  animation: plate-pulse 2s ease-in-out infinite;
+  transform-origin: 48px 58px;
+}
+.pasta-fork {
+  animation: pasta-fork 1.6s ease-in-out infinite;
+  transform-origin: 70px 30px;
+}
+
+@keyframes pasta-flow {
   0%,
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateX(0) translateY(0);
   }
   50% {
-    transform: translateY(-4px) rotate(-4deg);
+    transform: translateX(3px) translateY(-2px);
+  }
+}
+@keyframes pasta-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+@keyframes plate-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+@keyframes pasta-fork {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-12deg) translateY(3px);
+  }
+}
+
+/* 刀叉：交叉开合 */
+.cutlery-fork {
+  animation: fork-swing 1.4s ease-in-out infinite;
+  transform-origin: 36px 50px;
+}
+.cutlery-knife {
+  animation: knife-swing 1.4s ease-in-out infinite;
+  transform-origin: 62px 50px;
+}
+
+@keyframes fork-swing {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-14deg) translateY(-4px);
+  }
+}
+@keyframes knife-swing {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(14deg) translateY(-4px);
+  }
+}
+
+@keyframes food-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
