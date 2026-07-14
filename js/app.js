@@ -811,19 +811,27 @@ function renderCapture() {
         <span class="hero-num" aria-hidden="true">01</span>
         <div class="hero-body">
           <p class="hero-kicker anim-fade-up d1">
-            <span>远方的一页 · PAGES FROM AFAR</span>
+            <span>远方的一页</span>
+            <span class="en">PAGES FROM AFAR</span>
           </p>
           <h2 class="hero-title anim-fade-up d2">
-            把菜单上的远方<em>读给你听</em>
+            <span class="hero-title-line">把菜单上的远方</span>
+            <span class="hero-title-line"><em>读给你听</em></span>
           </h2>
           <p class="hero-desc anim-fade-up d3">
-            一张菜单，是旅途落在餐桌上的注脚。对准纸上的陌生字句，我们替你译出名字，也译出味道，再把这一餐，整理成一张从容好用的点单卡。
+            异乡的味道，常藏于尚未读懂的菜单。<br/>
+            识别这些陌生字句，<br/>
+            为你译出食材、风味与分寸。<br/>
+            让每次一点餐，<br/>
+            都成为抵达一座城市的另一种方式。
           </p>
         </div>
       </div>
 
       <div class="hero-en-line anim-fade-up d4">
-        <span>FRAME THE PAGE · READ THE FLAVOUR · KEEP THE JOURNEY</span>
+        <span>FRAME THE PAGE</span>
+        <span>READ THE FLAVOUR</span>
+        <span>KEEP THE JOURNEY</span>
       </div>
       <div class="hero-rule" aria-hidden="true"></div>
 
@@ -831,15 +839,15 @@ function renderCapture() {
         <button type="button" class="btn-capture anim-fade-up d5" id="btn-camera">
           <img class="btn-capture-bg" src="${asset('assets/card-camera.jpg')}" alt="" />
           <span class="cap-icon">01 · LENS</span>
-          <span class="cap-label">现场拍</span>
-          <span class="cap-sub">CAPTURE NOW</span>
+          <span class="cap-label">拍下此页</span>
+          <span class="cap-sub">CAPTURE</span>
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
         </button>
         <button type="button" class="btn-capture anim-fade-up d6" id="btn-gallery">
           <img class="btn-capture-bg" src="${asset('assets/card-gallery.jpg')}" alt="" />
           <span class="cap-icon">02 · ROLL</span>
-          <span class="cap-label">从相册</span>
-          <span class="cap-sub">FROM GALLERY</span>
+          <span class="cap-label">相册传输</span>
+          <span class="cap-sub">GALLERY</span>
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
         </button>
       </div>
@@ -1063,20 +1071,28 @@ function renderPipeline() {
   return `
     <div id="pipeline-root" class="pipeline-root">
       <div class="pipeline-hero">
-        <div class="pipeline-plate" aria-hidden="true">
-          <div class="plate-rim"></div>
-          <div class="plate-inner"></div>
-          <div class="plate-steam s1"></div>
-          <div class="plate-steam s2"></div>
-          <div class="plate-steam s3"></div>
-          <svg class="plate-fork" viewBox="0 0 24 48" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M6 4v12M10 4v12M14 4v12M10 16v28M6 16h8" stroke-linecap="round"/>
-          </svg>
-          <svg class="plate-knife" viewBox="0 0 24 48" fill="none" stroke="currentColor" stroke-width="1.4">
-            <path d="M12 4c4 6 4 14 0 20v20M8 24h8" stroke-linecap="round"/>
-          </svg>
-          <div class="plate-spark a"></div>
-          <div class="plate-spark b"></div>
+        <div class="pipeline-food" aria-hidden="true">
+          <div class="food-stage">
+            <div class="food-steam s1"></div>
+            <div class="food-steam s2"></div>
+            <div class="food-steam s3"></div>
+            <svg class="food-svg" viewBox="0 0 96 96" fill="none">
+              <!-- 碗 -->
+              <ellipse class="food-bowl-rim" cx="48" cy="58" rx="34" ry="10" stroke="currentColor" stroke-width="2"/>
+              <path class="food-bowl-body" d="M18 58c2 16 12 26 30 26s28-10 30-26" stroke="currentColor" stroke-width="2" fill="rgba(143,145,120,0.08)"/>
+              <!-- 面/汤 -->
+              <ellipse class="food-broth" cx="48" cy="56" rx="26" ry="7" fill="rgba(143,145,120,0.22)"/>
+              <path class="food-noodle n1" d="M28 54c6 4 10-2 16 2s10-2 16 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path class="food-noodle n2" d="M30 58c5 3 9-1 14 2s11-1 16 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/>
+              <!-- 筷子 -->
+              <path class="food-chop c1" d="M62 18l18 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path class="food-chop c2" d="M68 16l18 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <!-- 装饰点 -->
+              <circle class="food-dot d1" cx="40" cy="54" r="2.2" fill="currentColor"/>
+              <circle class="food-dot d2" cx="52" cy="52" r="1.8" fill="currentColor"/>
+              <circle class="food-dot d3" cx="58" cy="56" r="1.6" fill="currentColor"/>
+            </svg>
+          </div>
         </div>
         <div class="pipeline-hero-text">
           <p class="pipeline-kicker">STEP ${String(currentIdx + 1).padStart(2, '0')} / ${String(PIPELINE_STEPS.length).padStart(2, '0')}</p>

@@ -506,9 +506,11 @@ body[data-view='menu'] .main.has-cart {
   font-size: 0.58rem;
   color: var(--ink-dim);
   letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .hero-kicker .en {
@@ -532,18 +534,15 @@ body[data-view='menu'] .main.has-cart {
 .hero-title {
   margin: 0 0 16px;
   font-family: var(--serif);
-  font-size: clamp(1.85rem, 8vw, 2.35rem);
+  font-size: clamp(1.95rem, 8.5vw, 2.4rem);
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.28;
   letter-spacing: 0.02em;
   color: var(--ink);
-  /* 不人为断句：允许自然换行，不拆开强制分行 */
-  white-space: normal;
-  word-break: keep-all;
 }
 
 .hero-title-line {
-  display: inline;
+  display: block;
 }
 
 .hero-title em {
@@ -554,33 +553,48 @@ body[data-view='menu'] .main.has-cart {
   padding: 0 3px 1px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
-  white-space: nowrap;
 }
 
 .hero-desc {
   margin: 0;
   color: var(--ink-dim);
   font-size: 0.86rem;
-  line-height: 1.75;
-  max-width: 18em;
-  /* 整段自然排版，不插入强制断行 */
-  word-break: keep-all;
-  overflow-wrap: break-word;
+  line-height: 1.8;
+  max-width: 17em;
 }
 
+/* 三句英文铺满整行，拉大间距 */
 .hero-en-line {
   margin: 0;
   padding: 14px 16px;
   font-family: var(--mono);
-  font-size: 0.54rem;
-  letter-spacing: 0.08em;
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--bg);
+}
+
+.hero-en-line > span {
+  flex: 1 1 0;
+  text-align: center;
+  color: var(--accent-deep);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hero-en-line > span:first-child {
+  text-align: left;
+}
+
+.hero-en-line > span:last-child {
+  text-align: right;
 }
 
 .hero-en-line b {
@@ -987,174 +1001,175 @@ body[data-view='menu'] .main.has-cart {
 
 .pipeline-hero {
   display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 16px;
-  padding: 20px;
-  min-height: 132px;
+  grid-template-columns: 112px 1fr;
+  gap: 14px;
+  padding: 18px 16px;
+  min-height: 140px;
   background: var(--bg-card);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   align-items: center;
 }
 
-/* 餐饮向加载动画：餐盘 + 刀叉 + 蒸汽 */
-.pipeline-plate {
+/* 餐饮加载动画：热汤面碗 + 筷子 + 蒸汽（覆盖全局直角规则） */
+.pipeline-food {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   flex-shrink: 0;
+  color: var(--accent-deep);
 }
 
-.plate-rim {
-  position: absolute;
-  inset: 14px 10px 10px;
-  border: 2px solid rgba(143, 145, 120, 0.55);
-  border-radius: 50%;
+.food-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
   background:
-    radial-gradient(circle at 50% 42%, #fffcf7 0 38%, rgba(246, 243, 237, 0.95) 55%, #efebe3 100%);
-  box-shadow:
-    inset 0 0 0 6px rgba(255, 255, 255, 0.55),
-    0 6px 14px rgba(44, 41, 36, 0.08);
-  animation: plate-breathe 2.4s ease-in-out infinite;
+    radial-gradient(circle at 50% 55%, rgba(143, 145, 120, 0.12), transparent 62%);
+  border-radius: 50% !important;
+  animation: food-breathe 2.8s ease-in-out infinite;
 }
 
-.plate-inner {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  width: 28px;
-  height: 28px;
-  margin: -14px 0 0 -14px;
-  border-radius: 50%;
-  background: rgba(143, 145, 120, 0.22);
-  box-shadow: 0 0 0 4px rgba(143, 145, 120, 0.08);
-  animation: plate-pulse 1.8s ease-in-out infinite;
+.food-svg {
+  width: 88px;
+  height: 88px;
+  display: block;
+  overflow: visible;
 }
 
-.plate-steam {
+.food-bowl-rim,
+.food-bowl-body {
+  color: var(--accent-deep);
+}
+
+.food-broth {
+  animation: broth-ripple 2.2s ease-in-out infinite;
+  transform-origin: 48px 56px;
+}
+
+.food-noodle {
+  animation: noodle-sway 2.4s ease-in-out infinite;
+}
+
+.food-noodle.n2 {
+  animation-delay: 0.3s;
+}
+
+.food-chop {
+  transform-origin: 70px 20px;
+  animation: chopstick-dip 2.6s ease-in-out infinite;
+}
+
+.food-chop.c2 {
+  animation-delay: 0.12s;
+}
+
+.food-dot {
+  animation: food-dot-pop 2s ease-in-out infinite;
+}
+
+.food-dot.d2 {
+  animation-delay: 0.25s;
+}
+.food-dot.d3 {
+  animation-delay: 0.5s;
+}
+
+.food-steam {
   position: absolute;
+  top: 10px;
   left: 50%;
-  width: 3px;
-  height: 14px;
-  margin-left: -1.5px;
-  border-radius: 99px;
-  background: linear-gradient(180deg, transparent, rgba(143, 145, 120, 0.45));
+  width: 4px;
+  height: 18px;
+  margin-left: -2px;
+  background: linear-gradient(180deg, transparent, rgba(143, 145, 120, 0.55), transparent);
+  border-radius: 99px !important;
   opacity: 0;
-  animation: steam-rise 2s ease-in-out infinite;
+  animation: food-steam 2.1s ease-in-out infinite;
+  pointer-events: none;
 }
 
-.plate-steam.s1 {
-  top: 8px;
+.food-steam.s1 {
   animation-delay: 0s;
 }
-.plate-steam.s2 {
-  top: 6px;
-  margin-left: -10px;
+.food-steam.s2 {
+  margin-left: -12px;
   animation-delay: 0.35s;
+  height: 16px;
 }
-.plate-steam.s3 {
-  top: 6px;
-  margin-left: 7px;
+.food-steam.s3 {
+  margin-left: 8px;
   animation-delay: 0.7s;
+  height: 15px;
 }
 
-.plate-fork,
-.plate-knife {
-  position: absolute;
-  width: 14px;
-  height: 36px;
-  color: var(--accent-deep);
-  opacity: 0.55;
-  top: 28px;
-}
-
-.plate-fork {
-  left: 4px;
-  animation: utensil-float 2.6s ease-in-out infinite;
-}
-
-.plate-knife {
-  right: 4px;
-  animation: utensil-float 2.6s ease-in-out infinite reverse;
-}
-
-.plate-spark {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent);
-  opacity: 0;
-  animation: spark-pop 2.2s ease-in-out infinite;
-}
-
-.plate-spark.a {
-  top: 18px;
-  right: 22px;
-}
-.plate-spark.b {
-  bottom: 18px;
-  left: 20px;
-  animation-delay: 1.1s;
-}
-
-@keyframes plate-breathe {
+@keyframes food-breathe {
   0%,
   100% {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.03);
+    transform: scale(1.04);
   }
 }
 
-@keyframes plate-pulse {
+@keyframes broth-ripple {
   0%,
   100% {
     transform: scale(1);
-    opacity: 0.85;
+    opacity: 0.9;
   }
   50% {
-    transform: scale(1.12);
+    transform: scale(1.06);
     opacity: 1;
   }
 }
 
-@keyframes steam-rise {
-  0% {
-    opacity: 0;
-    transform: translateY(8px) scaleY(0.6);
-  }
-  30% {
-    opacity: 0.7;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-14px) scaleY(1.1);
-  }
-}
-
-@keyframes utensil-float {
+@keyframes noodle-sway {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateX(0);
   }
   50% {
-    transform: translateY(-3px);
+    transform: translateX(1.5px);
   }
 }
 
-@keyframes spark-pop {
+@keyframes chopstick-dip {
   0%,
-  70%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-6deg) translateY(2px);
+  }
+}
+
+@keyframes food-dot-pop {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes food-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scaleY(0.5);
+  }
+  35% {
+    opacity: 0.85;
+  }
   100% {
     opacity: 0;
-    transform: scale(0.4);
-  }
-  80% {
-    opacity: 0.9;
-    transform: scale(1);
+    transform: translateY(-16px) scaleY(1.15);
   }
 }
 
@@ -1478,23 +1493,29 @@ body[data-view='menu'] .main.has-cart {
   color: var(--ink-faint);
 }
 
-/* 风格化确认框 */
-.confirm-modal {
-  z-index: 90;
-  align-items: center;
-  justify-content: center;
+/* 风格化确认框 · 强制页面正中（覆盖 .modal 的 flex-end） */
+.modal.confirm-modal {
+  z-index: 120;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 24px 20px;
+  inset: 0;
+}
+
+.modal.confirm-modal .modal-backdrop {
+  position: absolute;
+  inset: 0;
 }
 
 .confirm-sheet {
   position: relative;
-  width: 100%;
-  max-width: 320px;
+  width: min(100%, 320px);
+  margin: auto;
   padding: 22px 20px 18px;
-  background: var(--bg-elev);
+  background: #fffcf7;
   border: 1px solid var(--line);
-  box-shadow: 0 16px 40px rgba(44, 41, 36, 0.12);
-  z-index: 1;
+  box-shadow: 0 16px 40px rgba(44, 41, 36, 0.14);
+  z-index: 2;
   animation: soft-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
