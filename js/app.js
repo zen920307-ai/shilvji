@@ -57,6 +57,13 @@ function zenCredit(tag = '') {
   return `<footer class="zen-footer"><em>DESIGN BY ZEN</em>${tag ? ` · ${tag}` : ' · 食旅集'}</footer>`;
 }
 
+const ASSET_BASE = import.meta.env.BASE_URL || '/';
+function asset(path) {
+  return `${ASSET_BASE}${String(path).replace(/^\//, '')}`;
+}
+
+const ARROW_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 // —— UI helpers ——
 function toast(msg, ms = 2200) {
   toastEl.textContent = msg;
@@ -499,35 +506,50 @@ async function openGalleryPicker() {
 
 function renderCapture() {
   const n = state.photos.length;
-  const marquee =
-    '远方的菜单 · 近在眼前 · 把陌生的字读成乡音 · TABLESIDE POETRY · DESIGN BY ZEN · ';
   return `
     <section class="hero-card">
-      <div class="hero-marquee" aria-hidden="true">
-        <div class="hero-marquee-track">
-          <span>${marquee}</span><span>${marquee}</span>
+      <div class="hero-ticker">
+        <div class="hero-ticker-left">
+          <span>字读成乡音</span>
+          <span class="hero-ticker-dot"></span>
+          <span>Tableside Poetry</span>
+          <span class="hero-ticker-dot"></span>
+          <span>Design by Zen</span>
+        </div>
+        <span>远方的纸页</span>
+      </div>
+      <div class="hero-visual">
+        <img class="hero-visual-img" src="${asset('assets/hero-menu.jpg')}" alt="" />
+        <span class="hero-num" aria-hidden="true">01</span>
+        <div class="hero-body">
+          <p class="hero-kicker">
+            <span>异乡的纸页</span>
+            <span class="en">PAGES OF ELSEWHERE</span>
+          </p>
+          <h2 class="hero-title">把陌生菜名<br/><em>读成乡音</em></h2>
+          <p class="hero-desc">一页菜单，半段旅程。<br/>镜头对准纸上的字，我们替你译出味道，再递一张清清楚楚的点单卡，给对面那个人。</p>
+          <p class="hero-en-line">
+            <span><b>LENS</b> on the page</span>
+            <span><b>WORDS</b> into taste</span>
+            <span><b>CARD</b> to the table</span>
+          </p>
         </div>
       </div>
-      <div class="hero-body">
-        <p class="hero-kicker">
-          <span>// 异乡的纸页</span>
-          <span class="en">PAGES OF ELSEWHERE</span>
-        </p>
-        <h2 class="hero-title">把陌生菜名<em>读成乡音</em></h2>
-        <p class="hero-desc">一页菜单，半段旅程。镜头对准纸上的字，我们替你译出味道，再递一张清清楚楚的点单卡，给对面那个人。</p>
-        <p class="hero-en-line"><b>Lens</b> on the page · <b>Words</b> into taste · <b>Card</b> to the table</p>
-      </div>
       <div class="capture-actions">
-        <label class="btn-capture" data-en="CAM">
+        <label class="btn-capture">
+          <img class="btn-capture-bg" src="${asset('assets/card-camera.jpg')}" alt="" />
           <span class="cap-icon">01 · LENS</span>
           <span class="cap-label">现场拍</span>
           <span class="cap-sub">Capture now</span>
+          <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
           <input id="input-camera" type="file" accept="image/*" capture="environment" multiple hidden />
         </label>
-        <button type="button" class="btn-capture" data-en="LIB" id="btn-gallery">
+        <button type="button" class="btn-capture" id="btn-gallery">
+          <img class="btn-capture-bg" src="${asset('assets/card-gallery.jpg')}" alt="" />
           <span class="cap-icon">02 · ROLL</span>
           <span class="cap-label">从相册</span>
           <span class="cap-sub">From gallery</span>
+          <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
         </button>
       </div>
       <input id="input-gallery" type="file" accept="${GALLERY_ACCEPT}" multiple hidden />
@@ -561,7 +583,9 @@ function renderCapture() {
 
     <div class="analyze-wrap">
       <button type="button" class="btn-primary" id="btn-analyze" ${n ? '' : 'disabled'}>
+        <span aria-hidden="true">☰</span>
         开卷 · 读懂这页菜单
+        <span aria-hidden="true">${ARROW_SVG}</span>
       </button>
       <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
       ${
@@ -821,7 +845,7 @@ function renderMenu() {
     <div class="menu-wrap">
       <button type="button" class="back-link" id="btn-back-capture">← 再拍一页</button>
       <div class="menu-header">
-        <p class="menu-kicker">${cats.length} 个篇章 · DESIGN BY ZEN</p>
+        <p class="menu-kicker">${cats.length} 个篇章 · Tableside · Design by Zen</p>
         <h2>${escapeHtml(menu.restaurant_name)}</h2>
         <p class="menu-meta">
           ${countDishes(menu)} 道 · ${menu.currency}
@@ -939,7 +963,7 @@ function renderOrder() {
         <h2>核对清单</h2>
       </div>
       <p class="order-tip">
-        确认无误后点「点完了」· 生成 <strong>购物清单卡</strong> 给服务员 · DESIGN BY ZEN
+        确认无误后点「点完了」· 生成一张清雅的 <strong>菜单卡</strong> 递给服务员
       </p>
       ${items
         .map(
@@ -1132,7 +1156,7 @@ function renderHistory() {
             </div>`,
               )
               .join('')
-          : `<div class="empty-state" style="margin:16px;border:var(--border)">
+          : `<div class="empty-state" style="margin-top:16px">
               <div class="emoji">空白旅记</div>
               还没有写下任何一餐<br/>点完菜之后，会留在这里
             </div>`
