@@ -35,7 +35,8 @@
   --analyze-h: 100px;
   --pad-b: 0px;
   --app-foot-h: 18px;
-  --cart-bg: var(--bg);
+  /* 购物车底栏：比页面米灰更浅 */
+  --cart-bg: #fffcf7;
   --font: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
   --serif: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -1186,7 +1187,7 @@ body[data-view='menu'] .main.has-cart {
   padding-bottom: 8px;
 }
 
-/* 全局统一返回：固定左内边距 + 固定箭头槽，文字起点一致 */
+/* 全局统一返回：严格对齐点单页（无父级水平 padding） */
 .back-link {
   display: flex;
   align-items: center;
@@ -1194,6 +1195,7 @@ body[data-view='menu'] .main.has-cart {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
+  /* 与点单页一致：左 16px */
   padding: 12px 16px 6px 16px;
   border: none;
   background: none;
@@ -1260,7 +1262,7 @@ body[data-view='menu'] .main.has-cart {
 
 .menu-meta-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -1271,8 +1273,10 @@ body[data-view='menu'] .main.has-cart {
   min-width: 0;
   font-size: 0.8rem;
   color: var(--ink-dim);
-  line-height: 1.45;
+  line-height: 1.2;
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
 }
 
 .menu-meta-right {
@@ -1280,16 +1284,19 @@ body[data-view='menu'] .main.has-cart {
   flex-shrink: 0;
   max-width: 48%;
   text-align: right;
+  display: flex;
+  align-items: center;
 }
 
 .menu-fx-tag {
-  display: inline-block;
-  padding: 4px 9px;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
   font-family: var(--mono);
   font-size: 0.6rem;
   font-weight: 500;
   letter-spacing: 0.02em;
-  line-height: 1.35;
+  line-height: 1;
   color: var(--accent-deep);
   background: rgba(143, 145, 120, 0.14);
   border: 1px solid rgba(143, 145, 120, 0.28);
@@ -1782,7 +1789,7 @@ body[data-view='menu'] .main.has-cart {
   color: #fff !important;
 }
 
-/* Order */
+/* Order / History / Receipt：页面本体不设水平 padding，避免返回按钮被二次缩进 */
 .order-page {
   padding: 0 0 24px;
 }
@@ -1792,12 +1799,13 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .history-page {
-  padding: 0 0 16px;
+  padding: 0 0 28px;
 }
 
 .history-page h2,
 .order-page h2 {
   padding: 0;
+  margin-left: 0;
 }
 
 .order-page h2,
@@ -1967,38 +1975,34 @@ body[data-view='menu'] .main.has-cart {
   width: 100%;
 }
 
-/* Receipt · 文艺点单卡 */
+/* Receipt · 纯白小票；页面无水平 padding，返回与点单页对齐 */
 .receipt-page {
-  padding: 4px 16px 24px;
+  padding: 0 0 24px;
   background: var(--bg);
 }
 
+.receipt-page .shopping-list.bill-sheet {
+  margin: 8px 16px 0;
+}
+
 .shopping-list.bill-sheet {
-  --card-paper: #fffcf8;
+  --card-paper: #ffffff;
   --card-ink: #2a2620;
   --card-muted: #7a746a;
-  --card-line: #ebe4d8;
+  --card-line: #ece7de;
   --card-accent: #6f725c;
   position: relative;
   margin: 0;
   padding: 0 0 4px;
-  border: 1px solid rgba(200, 192, 176, 0.55);
-  background: var(--card-paper);
+  border: 1px solid rgba(200, 192, 176, 0.45);
+  background: #ffffff;
   color: var(--card-ink);
-  /* 极轻投影，与背景轻微分开 */
   box-shadow: 0 4px 18px rgba(44, 41, 36, 0.045);
   overflow: hidden;
 }
 
 .shopping-list.bill-sheet::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, transparent 28%),
-    radial-gradient(ellipse at 50% 0%, rgba(143, 145, 120, 0.05), transparent 55%);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .shopping-list.bill-sheet > * {
@@ -2008,21 +2012,21 @@ body[data-view='menu'] .main.has-cart {
 
 /* 齿孔装饰：贴合小票上下边 */
 .bill-perforation {
-  height: 16px;
+  height: 14px;
   margin: 0;
   background:
-    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 16px repeat-x;
+    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 14px repeat-x;
   border-bottom: none;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .bill-perforation.bottom {
-  height: 16px;
+  height: 14px;
   margin: 0;
   border-bottom: none;
   border-top: none;
   background:
-    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 16px repeat-x;
+    radial-gradient(circle at 10px 50%, var(--bg) 3.5px, transparent 4px) 0 0 / 20px 14px repeat-x;
 }
 
 .sl-head {
@@ -2260,22 +2264,26 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .receipt-actions {
-  margin-top: 12px;
+  margin: 12px 16px 0;
 }
 
-/* History */
-.history-page {
-  padding: 0 20px 28px;
+/* History · 无水平 padding，返回对齐点单页；内容单独缩进 */
+.history-page h2 {
+  padding: 4px 16px 8px;
 }
 
 .history-item {
-  margin-top: 12px;
+  margin: 12px 16px 0;
   padding: 16px;
   background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   cursor: pointer;
+}
+
+.history-page .empty-state {
+  margin: 16px;
 }
 
 .history-item h3 {
