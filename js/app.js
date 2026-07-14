@@ -65,11 +65,57 @@ function asset(path) {
 const ARROW_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 // —— UI helpers ——
-function toast(msg, ms = 2200) {
-  toastEl.textContent = msg;
-  toastEl.classList.remove('hidden');
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => toastEl.classList.add('hidden'), ms);
+/** 弱化提示：显示在顶部「食旅集」标题后 */
+function toast(msg, ms = 2400) {
+  const hint = document.getElementById('brand-hint');
+  if (hint) {
+    hint.textContent = String(msg || '');
+    hint.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => {
+      hint.classList.remove('show');
+      // 淡出后再清空，避免闪一下空位
+      setTimeout(() => {
+        if (!hint.classList.contains('show')) hint.textContent = '';
+      }, 280);
+    }, ms);
+    return;
+  }
+  // 兜底
+  if (toastEl) {
+    toastEl.textContent = msg;
+    toastEl.classList.remove('hidden');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.add('hidden'), ms);
+  }
+}
+
+function goHome() {
+  state.view = 'capture';
+  state.receipt = null;
+  render();
+}
+
+/** 实测底栏高度，避免预留过大导致「底部大片空白」 */
+function syncBottomBars() {
+  const analyze = document.querySelector('.analyze-wrap');
+  if (analyze) {
+    const h = Math.ceil(analyze.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--analyze-h', `${h}px`);
+  }
+  if (cartBar && !cartBar.classList.contains('hidden')) {
+    const h = Math.ceil(cartBar.getBoundingClientRect().height);
+    if (h > 0) document.documentElement.style.setProperty('--cart-h', `${h}px`);
+    main?.classList.add('has-cart');
+  } else {
+    main?.classList.remove('has-cart');
+  }
+}
+
+function pressFlash(el) {
+  if (!el) return;
+  el.classList.add('is-pressing');
+  window.setTimeout(() => el.classList.remove('is-pressing'), 160);
 }
 
 function openSettings() {
@@ -193,7 +239,11 @@ function cartStats() {
 function updateCartBar() {
   const show = state.view === 'menu' && Object.keys(state.cart).length > 0;
   cartBar.classList.toggle('hidden', !show);
-  if (!show) return;
+  main?.classList.toggle('has-cart', show);
+  if (!show) {
+    requestAnimationFrame(syncBottomBars);
+    return;
+  }
   const { count, totalCny, totalOrig, hasOrig } = cartStats();
   cartCountEl.textContent = String(count);
   const cur = state.menu?.currency || 'USD';
@@ -201,6 +251,7 @@ function updateCartBar() {
   cartTotalEl.textContent = hasOrig ? formatMoney(totalOrig, cur) : `¥${totalCny.toFixed(2)}`;
   cartTotalOrigEl.textContent =
     totalCny > 0 ? `约 ¥${totalCny.toFixed(2)}` : '';
+  requestAnimationFrame(syncBottomBars);
 }
 
 // —— Capture photos ——
@@ -462,6 +513,7 @@ function render() {
       main.innerHTML = renderCapture();
   }
   updateCartBar();
+  requestAnimationFrame(syncBottomBars);
 }
 
 /** 相册专用 accept：尽量避开系统「拍照 / 文件」入口 */
@@ -474,40 +526,27 @@ function isImageFile(file) {
   return /\.(jpe?g|png|webp|gif|heic|heif|bmp)$/i.test(file.name || '');
 }
 
-/** 直接打开相册/图片选择，不走「拍照 or 图库 or 文件」三选一 */
-async function openGalleryPicker() {
-  // 桌面 Chromium：系统文件选择器（无相机选项）
-  if (typeof window.showOpenFilePicker === 'function') {
-    try {
-      const handles = await window.showOpenFilePicker({
-        multiple: true,
-        excludeAcceptAllOption: true,
-        types: [
-          {
-            description: 'Images',
-            accept: {
-              'image/jpeg': ['.jpg', '.jpeg'],
-              'image/png': ['.png'],
-              'image/webp': ['.webp'],
-              'image/heic': ['.heic', '.heif'],
-              'image/gif': ['.gif'],
-            },
-          },
-        ],
-      });
-      const files = await Promise.all(handles.map((h) => h.getFile()));
-      addFiles(files);
-      return;
-    } catch (err) {
-      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
-      // 继续走 input 回退
-    }
-  }
-
+/**
+ * 直接唤起相册选图。
+ * 移动端禁用 showOpenFilePicker（容易弹出「拍照/图库/文件」三选一）。
+ */
+function openGalleryPicker() {
   const input = document.getElementById('input-gallery');
   if (!input) return;
   input.setAttribute('accept', GALLERY_ACCEPT);
   input.removeAttribute('capture');
+  // 部分 Android 对 multiple 会走更「重」的选择器，优先单图直进相册
+  // 仍保留 multiple 属性以兼容连选；若系统坚持弹层，至少不带 capture
+  input.value = '';
+  // 同步 click：必须在用户手势栈内，立刻拉起系统相册
+  input.click();
+}
+
+function openCameraPicker() {
+  const input = document.getElementById('input-camera');
+  if (!input) return;
+  input.setAttribute('accept', 'image/*');
+  input.setAttribute('capture', 'environment');
   input.value = '';
   input.click();
 }
@@ -560,14 +599,13 @@ function renderCapture() {
       <div class="hero-rule" aria-hidden="true"></div>
 
       <div class="capture-actions">
-        <label class="btn-capture anim-fade-up d5">
+        <button type="button" class="btn-capture anim-fade-up d5" id="btn-camera">
           <img class="btn-capture-bg" src="${asset('assets/card-camera.jpg')}" alt="" />
           <span class="cap-icon">01 · LENS</span>
           <span class="cap-label">现场拍</span>
           <span class="cap-sub">CAPTURE NOW</span>
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
-          <input id="input-camera" type="file" accept="image/*" capture="environment" multiple hidden />
-        </label>
+        </button>
         <button type="button" class="btn-capture anim-fade-up d6" id="btn-gallery">
           <img class="btn-capture-bg" src="${asset('assets/card-gallery.jpg')}" alt="" />
           <span class="cap-icon">02 · ROLL</span>
@@ -576,7 +614,8 @@ function renderCapture() {
           <span class="cap-arrow" aria-hidden="true">${ARROW_SVG}</span>
         </button>
       </div>
-      <input id="input-gallery" type="file" accept="${GALLERY_ACCEPT}" multiple hidden />
+      <input id="input-camera" type="file" accept="image/*" capture="environment" hidden />
+      <input id="input-gallery" type="file" accept="${GALLERY_ACCEPT}" hidden />
     </section>
 
     <section class="photo-section">
@@ -612,11 +651,6 @@ function renderCapture() {
         <span class="btn-ico" aria-hidden="true">${ARROW_SVG}</span>
       </button>
       <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
-      ${
-        !state.settings.apiKey
-          ? `<span class="tip-chip">还差一把钥匙 · 点右上角设置密钥 <span class="en">/ SET API KEY</span></span>`
-          : `<span class="tip-chip">可连拍多页 · 读之前仍能删掉某一张 <span class="en">/ MULTI-PAGE OK</span></span>`
-      }
     </div>
   `;
 }
@@ -630,10 +664,22 @@ function bindCapture() {
     addFiles(e.target.files);
     e.target.value = '';
   });
-  document.getElementById('btn-gallery')?.addEventListener('click', (e) => {
+
+  const camBtn = document.getElementById('btn-camera');
+  const galBtn = document.getElementById('btn-gallery');
+
+  // 必须在 click 手势内同步触发 input.click，才能立刻唤起系统相机/相册
+  camBtn?.addEventListener('click', (e) => {
     e.preventDefault();
+    pressFlash(camBtn);
+    openCameraPicker();
+  });
+  galBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    pressFlash(galBtn);
     openGalleryPicker();
   });
+
   document.getElementById('btn-clear-photos')?.addEventListener('click', () => {
     state.photos.forEach((p) => URL.revokeObjectURL(p.url));
     state.photos = [];
@@ -644,6 +690,8 @@ function bindCapture() {
   });
   document.getElementById('btn-analyze')?.addEventListener('click', startAnalyze);
   document.getElementById('btn-demo')?.addEventListener('click', loadDemoMenu);
+
+  requestAnimationFrame(syncBottomBars);
 }
 
 async function loadDemoMenu() {
@@ -1307,6 +1355,13 @@ function escapeHtml(s) {
 }
 
 // —— Global bindings ——
+document.getElementById('btn-home')?.addEventListener('click', goHome);
+document.getElementById('btn-home')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    goHome();
+  }
+});
 document.getElementById('btn-settings')?.addEventListener('click', openSettings);
 document.getElementById('btn-history')?.addEventListener('click', () => {
   state.view = 'history';
@@ -1373,10 +1428,21 @@ document.getElementById('cfg-base-url')?.addEventListener('input', highlightPres
 
 render();
 syncChromeHeight();
-window.addEventListener('resize', syncChromeHeight);
-window.addEventListener('orientationchange', () => setTimeout(syncChromeHeight, 120));
+syncBottomBars();
+window.addEventListener('resize', () => {
+  syncChromeHeight();
+  syncBottomBars();
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    syncChromeHeight();
+    syncBottomBars();
+  }, 120);
+});
 
-// 无 key 时轻提示
+// 无 key 时轻提示（显示在标题旁）
 if (!state.settings.apiKey) {
-  setTimeout(() => toast('右上角填密钥，再启程 · DESIGN BY ZEN', 2800), 600);
+  setTimeout(() => toast('点右上角填密钥即可启程', 3200), 500);
+} else {
+  setTimeout(() => toast('可连拍多页 · 读前可删', 2800), 500);
 }
