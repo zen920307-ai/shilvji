@@ -35,7 +35,7 @@
   --analyze-h: 100px;
   /* 彻底贴底：不使用 safe-area 垫高 */
   --pad-b: 0px;
-  --app-foot-h: 36px;
+  --app-foot-h: 22px;
   --font: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
   --serif: 'Cormorant Garamond', 'Noto Serif SC', 'Songti SC', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -219,26 +219,35 @@ body {
   display: none; /* 统一用 app-foot 固定底栏 */
 }
 
-/* 固定在应用底部的署名 */
+/* 署名底栏：极矮；首页 / 点单页隐藏 */
 .app-foot {
   flex-shrink: 0;
   height: var(--app-foot-h);
+  min-height: var(--app-foot-h);
   display: flex;
   align-items: center;
   justify-content: center;
   border-top: 1px solid var(--line);
   background: var(--bg);
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   color: var(--ink-faint);
   z-index: 40;
+  line-height: 1;
+  padding: 0;
 }
 
 .app-foot em {
   font-style: normal;
   color: var(--accent-deep);
+}
+
+body[data-view='capture'] .app-foot,
+body[data-view='menu'] .app-foot,
+body[data-view='loading'] .app-foot {
+  display: none;
 }
 
 /* ─── Topbar ─── */
@@ -1289,7 +1298,7 @@ body[data-view='menu'] .main.has-cart {
   flex: 0 0 auto;
   border: none;
   border-bottom: 2px solid transparent;
-  padding: 14px 14px 12px;
+  padding: 10px 14px 10px;
   margin: 0;
   font-family: var(--font);
   font-size: 0.84rem;
@@ -1299,24 +1308,45 @@ body[data-view='menu'] .main.has-cart {
   color: var(--ink-faint);
   cursor: pointer;
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
   white-space: nowrap;
   transition: color 0.25s ease, border-color 0.25s ease;
+  min-height: 52px;
+}
+
+.cat-chip-top {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .cat-chip-label {
   font-family: var(--serif);
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 500;
+  color: inherit;
 }
 
-.cat-chip .cat-count {
+.cat-chip-orig {
   font-family: var(--mono);
   font-size: 0.56rem;
   letter-spacing: 0.04em;
   color: inherit;
   opacity: 0.55;
+  max-width: 9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cat-chip .cat-count {
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  letter-spacing: 0.04em;
+  color: inherit;
+  opacity: 0.5;
   border: none;
   padding: 0;
 }
@@ -1334,6 +1364,11 @@ body[data-view='menu'] .main.has-cart {
 
 .cat-chip.active .cat-chip-label {
   font-weight: 600;
+}
+
+.cat-chip.active .cat-chip-orig {
+  opacity: 0.65;
+  color: var(--accent-deep);
 }
 
 .cat-chip.active .cat-count {
@@ -1401,8 +1436,6 @@ body[data-view='menu'] .main.has-cart {
   border: none;
   border-right: 1px solid var(--line);
   background: var(--bg-mute);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
   overflow: hidden;
 }
 
@@ -1414,11 +1447,6 @@ body[data-view='menu'] .main.has-cart {
   object-fit: cover;
   background: var(--bg-mute);
   display: block;
-  pointer-events: none;
-}
-
-.dish-img-hit:active {
-  opacity: 0.88;
 }
 
 .dish-img-fallback {
@@ -1556,7 +1584,7 @@ body[data-view='menu'] .main.has-cart {
   background: var(--bg-elev);
 }
 
-/* Cart · 贴屏幕最底部，不预留大块空白 */
+/* Cart · 底栏背景铺满至屏幕最底，不断开 */
 .cart-bar {
   position: fixed;
   left: 50%;
@@ -1565,13 +1593,13 @@ body[data-view='menu'] .main.has-cart {
   width: 100%;
   max-width: 480px;
   z-index: 50;
+  margin: 0;
   padding: 0;
-  /* 纯粹贴底，无 safe-area */
-  padding-bottom: 0;
-  background: rgba(255, 252, 247, 0.98);
+  /* 整条区域同一底色，贴屏幕底 */
+  background: #faf7f0;
   border-top: 1px solid var(--line);
   pointer-events: none;
-  box-shadow: 0 -4px 18px rgba(44, 41, 36, 0.05);
+  box-shadow: 0 -6px 20px rgba(44, 41, 36, 0.06);
 }
 
 .cart-bar.hidden {
@@ -1582,11 +1610,11 @@ body[data-view='menu'] .main.has-cart {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  min-height: 52px;
+  min-height: 56px;
   margin: 0;
-  padding: 6px 8px 6px 10px;
+  padding: 8px 10px 10px;
   gap: 8px;
-  background: transparent;
+  background: #faf7f0;
   border: none;
   overflow: visible;
   box-shadow: none;
@@ -1604,15 +1632,24 @@ body[data-view='menu'] .main.has-cart {
 
 .cart-badge-wrap {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   margin: 0;
+  padding: 0;
   display: grid;
   place-items: center;
-  background: rgba(143, 145, 120, 0.14);
+  background: rgba(143, 145, 120, 0.16);
   color: var(--accent-deep);
   flex-shrink: 0;
-  border: 1px solid rgba(143, 145, 120, 0.28);
+  border: 1px solid rgba(143, 145, 120, 0.32);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.cart-badge-wrap:active {
+  background: rgba(143, 145, 120, 0.28);
 }
 
 .cart-food-icon {
@@ -1875,28 +1912,30 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .shopping-list.bill-sheet {
-  --card-paper: #fffcf6;
-  --card-ink: #2a2620;
+  /* 近白卡纸，与页面米灰拉开对比 */
+  --card-paper: #fffeff;
+  --card-ink: #26221c;
   --card-muted: #7a746a;
-  --card-line: #e0d8c8;
-  --card-accent: #7a7d66;
+  --card-line: #e8e2d6;
+  --card-accent: #6f725c;
   position: relative;
   margin: 0;
   padding: 0;
-  border: 1px solid #d8d0c0;
+  border: 1px solid #d4cec0;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(143, 145, 120, 0.07), transparent 55%),
-    var(--card-paper);
+    linear-gradient(180deg, #ffffff 0%, #fffcf7 48%, #faf6ef 100%);
   color: var(--card-ink);
-  box-shadow: 0 10px 28px rgba(44, 41, 36, 0.06);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 12px 36px rgba(44, 41, 36, 0.08);
   overflow: hidden;
 }
 
 .shopping-list.bill-sheet::before {
   content: '';
   position: absolute;
-  inset: 12px;
-  border: 1px solid rgba(200, 192, 176, 0.55);
+  inset: 14px;
+  border: 1px solid rgba(200, 192, 176, 0.45);
   pointer-events: none;
   z-index: 0;
 }
@@ -1908,23 +1947,23 @@ body[data-view='menu'] .main.has-cart {
 
 /* 齿孔装饰：贴合小票上下边 */
 .bill-perforation {
-  height: 20px;
+  height: 22px;
   margin: 0;
   background:
-    radial-gradient(circle at 11px 50%, var(--bg) 4.5px, transparent 5px) 0 0 / 22px 20px repeat-x,
-    linear-gradient(180deg, #f0ebe3, #faf6ee);
+    radial-gradient(circle at 12px 50%, var(--bg) 5px, transparent 5.5px) 0 0 / 24px 22px repeat-x,
+    linear-gradient(180deg, #f3eee6, #fffcf7);
   border-bottom: 1px dashed var(--card-line);
   opacity: 1;
 }
 
 .bill-perforation.bottom {
-  height: 20px;
+  height: 22px;
   margin: 0;
   border-bottom: none;
   border-top: 1px dashed var(--card-line);
   background:
-    radial-gradient(circle at 11px 50%, var(--bg) 4.5px, transparent 5px) 0 0 / 22px 20px repeat-x,
-    linear-gradient(0deg, #f0ebe3, #faf6ee);
+    radial-gradient(circle at 12px 50%, var(--bg) 5px, transparent 5.5px) 0 0 / 24px 22px repeat-x,
+    linear-gradient(0deg, #f3eee6, #fffcf7);
 }
 
 .sl-head {
@@ -2478,10 +2517,34 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .cart-sheet-handle {
-  width: 36px;
-  height: 3px;
-  margin: 10px auto 0;
+  width: 42px;
+  height: 4px;
+  margin: 10px auto 4px;
   background: var(--line-hard);
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.cart-sheet-handle:active {
+  cursor: grabbing;
+}
+
+.cart-sheet-panel.is-dragging {
+  transition: none !important;
+}
+
+.modal-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.modal-handle:active {
+  cursor: grabbing;
+}
+
+.modal-sheet.is-dragging {
+  transition: none !important;
 }
 
 .cart-sheet-head {

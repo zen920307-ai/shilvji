@@ -64,14 +64,14 @@
       <div id="cart-bar" class="cart-bar hidden" aria-live="polite">
         <div class="cart-bar-inner">
           <div class="cart-info">
-            <div class="cart-badge-wrap" aria-hidden="true">
+            <button type="button" class="cart-badge-wrap" id="btn-cart-sheet" aria-label="查看已点清单" title="已点清单">
               <svg class="cart-food-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M4 11h16v2a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-2z" stroke-linejoin="round" />
                 <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round" />
                 <path d="M12 17v2" stroke-linecap="round" />
               </svg>
               <span id="cart-count" class="cart-count">0</span>
-            </div>
+            </button>
             <div class="cart-totals">
               <span id="cart-total" class="cart-total">¥0.00</span>
               <span id="cart-total-orig" class="cart-total-orig"></span>
@@ -85,7 +85,7 @@
       <div id="cart-sheet" class="cart-sheet hidden" aria-hidden="true">
         <div class="cart-sheet-backdrop" data-close-sheet></div>
         <div class="cart-sheet-panel" role="dialog" aria-labelledby="cart-sheet-title">
-          <div class="cart-sheet-handle" aria-hidden="true"></div>
+          <div class="cart-sheet-handle" data-drag-handle aria-hidden="true"></div>
           <div class="cart-sheet-head">
             <div>
               <p class="cart-sheet-kicker">已点内容</p>
@@ -108,7 +108,7 @@
     <div id="modal-settings" class="modal hidden" role="dialog" aria-labelledby="settings-title">
       <div class="modal-backdrop" data-close="settings"></div>
       <div class="modal-sheet">
-        <div class="modal-handle"></div>
+        <div class="modal-handle" data-drag-handle></div>
         <div class="modal-head-row">
           <div>
             <p class="modal-kicker">密钥 · DESIGN BY ZEN</p>

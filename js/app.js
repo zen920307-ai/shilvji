@@ -901,17 +901,17 @@ function renderDishCard(dish) {
       </div>`
     : `<button type="button" class="btn-add" data-add="${dish.id}">记下</button>`;
 
-  const imgInner = dish.image_url
-    ? `<img class="dish-img" src="${dish.image_url}" alt="" loading="lazy"
-         onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
-       <div class="dish-img-fallback" style="display:none">${dish.emoji || dishEmoji(dish.name_zh)}</div>`
-    : `<div class="dish-img-fallback">${dish.emoji || '🍽️'}</div>`;
+  const img = dish.image_url
+    ? `<div class="dish-img-hit" aria-hidden="true">
+        <img class="dish-img" src="${dish.image_url}" alt="" loading="lazy"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+        <div class="dish-img-fallback" style="display:none">${dish.emoji || dishEmoji(dish.name_zh)}</div>
+      </div>`
+    : `<div class="dish-img-hit" aria-hidden="true"><div class="dish-img-fallback">${dish.emoji || '🍽️'}</div></div>`;
 
   return `
     <article class="dish-card" data-dish-id="${dish.id}">
-      <button type="button" class="dish-img-hit" data-open-cart="${dish.id}" aria-label="查看已点">
-        ${imgInner}
-      </button>
+      ${img}
       <div class="dish-body">
         <h3 class="dish-name-zh">${escapeHtml(dish.name_zh)}</h3>
         <p class="dish-name-orig">${escapeHtml(dish.name_original)}</p>
@@ -967,8 +967,15 @@ function renderMenu() {
           .map(
             (c, i) => `
           <button type="button" class="cat-chip ${i === state.activeCat ? 'active' : ''}" data-cat="${i}">
-            <span class="cat-chip-label">${escapeHtml(c.name_zh)}</span>
-            <span class="cat-count">${c.items?.length || 0}</span>
+            <span class="cat-chip-top">
+              <span class="cat-chip-label">${escapeHtml(c.name_zh)}</span>
+              <span class="cat-count">${c.items?.length || 0}</span>
+            </span>
+            ${
+              c.name_original
+                ? `<span class="cat-chip-orig">${escapeHtml(c.name_original)}</span>`
+                : ''
+            }
           </button>`,
           )
           .join('')}
@@ -1040,12 +1047,6 @@ function bindMenu() {
   root.onclick = (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
-    const openCart = t.closest('[data-open-cart]');
-    if (openCart) {
-      e.preventDefault();
-      openCartSheet();
-      return;
-    }
     const cat = t.closest('[data-cat]');
     if (cat) {
       switchCategory(cat.getAttribute('data-cat'));
@@ -1497,7 +1498,59 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** 弹层顶部横条下拉关闭 */
+function bindDragToClose(panel, handle, onClose) {
+  if (!panel || !handle || handle.dataset.dragBound === '1') return;
+  handle.dataset.dragBound = '1';
+  let startY = 0;
+  let dy = 0;
+  let dragging = false;
+
+  const onDown = (e) => {
+    dragging = true;
+    startY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
+    dy = 0;
+    panel.classList.add('is-dragging');
+    panel.style.transition = 'none';
+    try {
+      handle.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+  const onMove = (e) => {
+    if (!dragging) return;
+    const y = e.clientY ?? e.touches?.[0]?.clientY ?? startY;
+    dy = Math.max(0, y - startY);
+    panel.style.transform = `translateY(${dy}px)`;
+    if (e.cancelable) e.preventDefault();
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.classList.remove('is-dragging');
+    panel.style.transition = '';
+    if (dy > 72) {
+      panel.style.transform = '';
+      onClose();
+    } else {
+      panel.style.transform = '';
+    }
+    dy = 0;
+  };
+
+  handle.addEventListener('pointerdown', onDown);
+  handle.addEventListener('pointermove', onMove);
+  handle.addEventListener('pointerup', onUp);
+  handle.addEventListener('pointercancel', onUp);
+}
+
 // —— Cart sheet bindings ——
+document.getElementById('btn-cart-sheet')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  openCartSheet();
+});
 document.getElementById('cart-sheet')?.addEventListener('click', (e) => {
   const t = e.target;
   if (!(t instanceof Element)) return;
@@ -1523,6 +1576,19 @@ document.getElementById('cart-sheet-checkout')?.addEventListener('click', () => 
   closeCartSheet();
   checkout();
 });
+
+// 已点清单弹层 · 下拉关闭
+bindDragToClose(
+  document.querySelector('#cart-sheet .cart-sheet-panel'),
+  document.querySelector('#cart-sheet [data-drag-handle]'),
+  closeCartSheet,
+);
+// 设置弹层 · 下拉关闭
+bindDragToClose(
+  document.querySelector('#modal-settings .modal-sheet'),
+  document.querySelector('#modal-settings [data-drag-handle]'),
+  closeSettings,
+);
 
 // —— Global bindings ——
 document.getElementById('btn-home')?.addEventListener('click', goHome);
