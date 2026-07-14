@@ -98,9 +98,13 @@ function toast(msg, ms = 2400) {
   }
 }
 
-function goHome() {
+async function goHome() {
   if (state.view === 'loading') {
-    const ok = window.confirm('有任务正在进行中，需要终止任务吗？');
+    const ok = await appConfirm('有任务正在进行中，需要终止任务吗？', {
+      title: '任务进行中',
+      okText: '终止并离开',
+      cancelText: '继续等待',
+    });
     if (!ok) return;
     state.taskGen += 1;
     state.pipeline = { stepId: 'compress', note: '', meta: {} };
@@ -529,6 +533,54 @@ function resumeOrderFromHistory(entry) {
   render();
 }
 
+/** 免费 Overpass：附近带名字的餐饮点 */
+async function fetchNearbyVenueName(lat, lon) {
+  try {
+    const q = `[out:json][timeout:10];(
+      node(around:120,${lat},${lon})[name][amenity~"restaurant|cafe|bar|fast_food|pub|biergarten|food_court|ice_cream"];
+      way(around:120,${lat},${lon})[name][amenity~"restaurant|cafe|bar|fast_food|pub|food_court"];
+      node(around:120,${lat},${lon})[name][shop~"bakery|convenience"];
+    );out center 6;`;
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: `data=${encodeURIComponent(q)}`,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const named = (data.elements || []).find((el) => el.tags?.name);
+    return named?.tags?.name || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 免费 Nominatim 逆地理 */
+async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&accept-language=zh&zoom=18`;
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return { address: null, name: null };
+    const data = await res.json();
+    const a = data.address || {};
+    const name =
+      data.name ||
+      a.amenity ||
+      a.shop ||
+      a.tourism ||
+      a.building ||
+      null;
+    return {
+      address: data.display_name || null,
+      name: typeof name === 'string' && name.length > 1 ? name : null,
+    };
+  } catch {
+    return { address: null, name: null };
+  }
+}
+
 async function locateRestaurant() {
   if (!state.menu) return;
   if (!navigator.geolocation) {
@@ -538,9 +590,11 @@ async function locateRestaurant() {
   if (state.locating) return;
   state.locating = true;
   const btn = document.getElementById('btn-locate');
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = '定位中…';
+  if (btn) btn.disabled = true;
+  const addrEl = document.getElementById('menu-address');
+  if (addrEl) {
+    addrEl.textContent = '定位中…';
+    addrEl.classList.add('is-empty');
   }
   try {
     const pos = await new Promise((resolve, reject) => {
@@ -551,29 +605,31 @@ async function locateRestaurant() {
       });
     });
     const { latitude, longitude } = pos.coords;
-    let address = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
-    try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh`;
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.display_name) address = data.display_name;
-      }
-    } catch {
-      /* 用坐标兜底 */
-    }
+
+    const [geo, venue] = await Promise.all([
+      reverseGeocode(latitude, longitude),
+      fetchNearbyVenueName(latitude, longitude),
+    ]);
+
+    const address =
+      geo.address || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+    const placeName = venue || geo.name || null;
+
     state.menu.address = address;
     state.menu.lat = latitude;
     state.menu.lng = longitude;
-    toast('已写入当前位置');
-    // 局部刷新地址区
-    const addrEl = document.getElementById('menu-address');
+    if (placeName) {
+      state.menu.restaurant_name = placeName;
+      const nameInput = document.getElementById('menu-name-edit');
+      if (nameInput) nameInput.value = placeName;
+    }
+
     if (addrEl) {
       addrEl.textContent = address;
       addrEl.classList.remove('is-empty');
-    } else {
-      render();
+      addrEl.title = address;
     }
+    toast(placeName ? `已定位 · ${placeName}` : '已写入当前位置');
   } catch (err) {
     const msg =
       err?.code === 1
@@ -582,21 +638,62 @@ async function locateRestaurant() {
           ? '定位超时，请再试一次'
           : '定位失败，请检查权限与网络';
     toast(msg, 3000);
+    if (addrEl && !state.menu?.address) {
+      addrEl.textContent = '点店名可编辑 · 点右侧图标定位餐厅';
+      addrEl.classList.add('is-empty');
+    }
   } finally {
     state.locating = false;
     const btn2 = document.getElementById('btn-locate');
-    if (btn2) {
-      btn2.disabled = false;
-      btn2.textContent = '定位';
-    }
+    if (btn2) btn2.disabled = false;
   }
 }
 
-function goHistory() {
+/** 风格化确认框（Promise） */
+function appConfirm(message, { title = '确认', okText = '确认', cancelText = '取消' } = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modal-confirm');
+    const msgEl = document.getElementById('confirm-message');
+    const titleEl = document.getElementById('confirm-title');
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    if (!modal || !msgEl || !okBtn || !cancelBtn) {
+      resolve(window.confirm(message));
+      return;
+    }
+    if (titleEl) titleEl.textContent = title;
+    msgEl.textContent = message;
+    okBtn.textContent = okText;
+    cancelBtn.textContent = cancelText;
+    modal.classList.remove('hidden');
+
+    const finish = (val) => {
+      modal.classList.add('hidden');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      modal.querySelectorAll('[data-confirm-cancel]').forEach((el) => {
+        el.removeEventListener('click', onCancel);
+      });
+      resolve(val);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    modal.querySelectorAll('[data-confirm-cancel]').forEach((el) => {
+      el.addEventListener('click', onCancel);
+    });
+  });
+}
+
+async function goHistory() {
   if (state.view === 'loading') {
-    const ok = window.confirm('有任务正在进行中，需要终止任务吗？');
+    const ok = await appConfirm('有任务正在进行中，需要终止任务吗？', {
+      title: '任务进行中',
+      okText: '终止并离开',
+      cancelText: '继续等待',
+    });
     if (!ok) return;
-    // 终止进行中任务
     state.taskGen += 1;
     state.pipeline = { stepId: 'compress', note: '', meta: {} };
   }
@@ -704,11 +801,7 @@ function renderCapture() {
       <div class="hero-ticker anim-fade-up">
         <div class="hero-ticker-left">
           <span class="hero-ticker-mark" aria-hidden="true">◎</span>
-          <span>异乡有字</span>
-          <span class="hero-ticker-sep">·</span>
-          <span>餐桌有诗</span>
-          <span class="hero-ticker-sep">·</span>
-          <span>TABLESIDE NOTES</span>
+          <span>异乡有字 · 餐桌有诗 · TABLESIDE NOTES</span>
         </div>
         <span class="hero-ticker-right">把远方装订成册</span>
       </div>
@@ -718,29 +811,19 @@ function renderCapture() {
         <span class="hero-num" aria-hidden="true">01</span>
         <div class="hero-body">
           <p class="hero-kicker anim-fade-up d1">
-            <span>远方的一页</span>
-            <span class="en">PAGES FROM AFAR</span>
+            <span>远方的一页 · PAGES FROM AFAR</span>
           </p>
           <h2 class="hero-title anim-fade-up d2">
-            <span class="hero-title-line">把菜单上的远方</span>
-            <span class="hero-title-line"><em>读给你听</em></span>
+            把菜单上的远方<em>读给你听</em>
           </h2>
           <p class="hero-desc anim-fade-up d3">
-            一张菜单，是旅途落在餐桌上的注脚。<br/>
-            对准纸上的陌生字句，<br/>
-            我们替你译出名字，也译出味道，<br/>
-            再把这一餐，<br/>
-            整理成一张从容好用的点单卡。
+            一张菜单，是旅途落在餐桌上的注脚。对准纸上的陌生字句，我们替你译出名字，也译出味道，再把这一餐，整理成一张从容好用的点单卡。
           </p>
         </div>
       </div>
 
       <div class="hero-en-line anim-fade-up d4">
-        <span>FRAME THE PAGE</span>
-        <span class="hero-en-dot">·</span>
-        <span>READ THE FLAVOUR</span>
-        <span class="hero-en-dot">·</span>
-        <span>KEEP THE JOURNEY</span>
+        <span>FRAME THE PAGE · READ THE FLAVOUR · KEEP THE JOURNEY</span>
       </div>
       <div class="hero-rule" aria-hidden="true"></div>
 
@@ -980,12 +1063,20 @@ function renderPipeline() {
   return `
     <div id="pipeline-root" class="pipeline-root">
       <div class="pipeline-hero">
-        <div class="pipeline-radar" aria-hidden="true">
-          <div class="radar-ring r1"></div>
-          <div class="radar-ring r2"></div>
-          <div class="radar-ring r3"></div>
-          <div class="radar-core"></div>
-          <div class="radar-scan"></div>
+        <div class="pipeline-plate" aria-hidden="true">
+          <div class="plate-rim"></div>
+          <div class="plate-inner"></div>
+          <div class="plate-steam s1"></div>
+          <div class="plate-steam s2"></div>
+          <div class="plate-steam s3"></div>
+          <svg class="plate-fork" viewBox="0 0 24 48" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M6 4v12M10 4v12M14 4v12M10 16v28M6 16h8" stroke-linecap="round"/>
+          </svg>
+          <svg class="plate-knife" viewBox="0 0 24 48" fill="none" stroke="currentColor" stroke-width="1.4">
+            <path d="M12 4c4 6 4 14 0 20v20M8 24h8" stroke-linecap="round"/>
+          </svg>
+          <div class="plate-spark a"></div>
+          <div class="plate-spark b"></div>
         </div>
         <div class="pipeline-hero-text">
           <p class="pipeline-kicker">STEP ${String(currentIdx + 1).padStart(2, '0')} / ${String(PIPELINE_STEPS.length).padStart(2, '0')}</p>
@@ -1091,22 +1182,30 @@ function renderMenu() {
       ${backBtn('btn-back-capture', '返回')}
       <div class="menu-header">
         <div class="menu-name-block">
-          <input
-            type="text"
-            class="menu-title-input"
-            id="menu-name-edit"
-            value="${escapeHtml(menu.restaurant_name || '')}"
-            placeholder="输入店名"
-            maxlength="48"
-            autocomplete="off"
-          />
-          <p class="menu-name-hint">点店名可编辑 · 改完会随点单一起记下</p>
-        </div>
-        <div class="menu-locate-row">
-          <p id="menu-address" class="menu-address ${address ? '' : 'is-empty'}">${
-            address ? escapeHtml(address) : '尚未定位 · 点右侧获取当前位置'
+          <div class="menu-name-row">
+            <input
+              type="text"
+              class="menu-title-input"
+              id="menu-name-edit"
+              value="${escapeHtml(menu.restaurant_name || '')}"
+              placeholder="输入店名"
+              maxlength="48"
+              autocomplete="off"
+            />
+            <button type="button" class="btn-locate-ico" id="btn-locate" aria-label="定位餐厅" title="定位餐厅">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11z" stroke-linejoin="round"/>
+                <circle cx="12" cy="10" r="2.2"/>
+              </svg>
+            </button>
+          </div>
+          <p id="menu-address" class="menu-address ${address ? '' : 'is-empty'}" title="${
+            address ? escapeHtml(address) : ''
+          }">${
+            address
+              ? escapeHtml(address)
+              : '点店名可编辑 · 点右侧图标定位餐厅'
           }</p>
-          <button type="button" class="btn-locate" id="btn-locate">定位</button>
         </div>
         <div class="menu-meta-row">
           <p class="menu-meta-left">${cats.length} 个分类 · ${dishCount} 道菜品</p>

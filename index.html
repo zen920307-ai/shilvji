@@ -105,6 +105,20 @@
       </div>
     </div>
 
+    <!-- 风格化确认框 -->
+    <div id="modal-confirm" class="modal confirm-modal hidden" role="dialog" aria-labelledby="confirm-title" aria-modal="true">
+      <div class="modal-backdrop" data-confirm-cancel></div>
+      <div class="confirm-sheet">
+        <p class="confirm-kicker">食旅集 · 提示</p>
+        <h2 id="confirm-title" class="confirm-title">确认</h2>
+        <p id="confirm-message" class="confirm-message"></p>
+        <div class="confirm-actions">
+          <button type="button" class="btn-ghost" id="confirm-cancel">取消</button>
+          <button type="button" class="btn-primary" id="confirm-ok">确认</button>
+        </div>
+      </div>
+    </div>
+
     <div id="modal-settings" class="modal hidden" role="dialog" aria-labelledby="settings-title">
       <div class="modal-backdrop" data-close="settings"></div>
       <div class="modal-sheet">

@@ -497,19 +497,18 @@ body[data-view='menu'] .main.has-cart {
   position: relative;
   z-index: 2;
   padding: 44px 16px 40px;
-  max-width: 16rem;
+  max-width: 18.5rem;
 }
 
 .hero-kicker {
   margin: 0 0 16px;
   font-family: var(--mono);
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   color: var(--ink-dim);
-  letter-spacing: 0.12em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-kicker .en {
@@ -531,17 +530,20 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .hero-title {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   font-family: var(--serif);
-  font-size: clamp(2.15rem, 9.2vw, 2.55rem);
+  font-size: clamp(1.85rem, 8vw, 2.35rem);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.35;
   letter-spacing: 0.02em;
   color: var(--ink);
+  /* 不人为断句：允许自然换行，不拆开强制分行 */
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .hero-title-line {
-  display: block;
+  display: inline;
 }
 
 .hero-title em {
@@ -552,28 +554,32 @@ body[data-view='menu'] .main.has-cart {
   padding: 0 3px 1px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  white-space: nowrap;
 }
 
 .hero-desc {
   margin: 0;
   color: var(--ink-dim);
   font-size: 0.86rem;
-  line-height: 1.85;
-  max-width: 14em;
+  line-height: 1.75;
+  max-width: 18em;
+  /* 整段自然排版，不插入强制断行 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .hero-en-line {
   margin: 0;
   padding: 14px 16px;
   font-family: var(--mono);
-  font-size: 0.56rem;
-  letter-spacing: 0.1em;
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: var(--bg);
 }
 
@@ -992,46 +998,164 @@ body[data-view='menu'] .main.has-cart {
   align-items: center;
 }
 
-.pipeline-radar {
+/* 餐饮向加载动画：餐盘 + 刀叉 + 蒸汽 */
+.pipeline-plate {
   position: relative;
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  background: var(--bg-mute);
-  overflow: hidden;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
 }
 
-.radar-ring {
+.plate-rim {
   position: absolute;
-  inset: 18%;
-  border: 1px solid rgba(143, 145, 120, 0.35);
+  inset: 14px 10px 10px;
+  border: 2px solid rgba(143, 145, 120, 0.55);
   border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 42%, #fffcf7 0 38%, rgba(246, 243, 237, 0.95) 55%, #efebe3 100%);
+  box-shadow:
+    inset 0 0 0 6px rgba(255, 255, 255, 0.55),
+    0 6px 14px rgba(44, 41, 36, 0.08);
+  animation: plate-breathe 2.4s ease-in-out infinite;
 }
 
-.radar-ring.r2 {
-  inset: 28%;
-}
-.radar-ring.r3 {
-  inset: 40%;
-}
-
-.radar-core {
+.plate-inner {
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
+  top: 52%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 6px rgba(143, 145, 120, 0.18);
+  background: rgba(143, 145, 120, 0.22);
+  box-shadow: 0 0 0 4px rgba(143, 145, 120, 0.08);
+  animation: plate-pulse 1.8s ease-in-out infinite;
 }
 
-.radar-scan {
+.plate-steam {
   position: absolute;
-  inset: 0;
-  background: conic-gradient(from 0deg, transparent 0 70%, rgba(143, 145, 120, 0.35) 100%);
-  animation: spin 2.4s linear infinite;
+  left: 50%;
+  width: 3px;
+  height: 14px;
+  margin-left: -1.5px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, rgba(143, 145, 120, 0.45));
+  opacity: 0;
+  animation: steam-rise 2s ease-in-out infinite;
+}
+
+.plate-steam.s1 {
+  top: 8px;
+  animation-delay: 0s;
+}
+.plate-steam.s2 {
+  top: 6px;
+  margin-left: -10px;
+  animation-delay: 0.35s;
+}
+.plate-steam.s3 {
+  top: 6px;
+  margin-left: 7px;
+  animation-delay: 0.7s;
+}
+
+.plate-fork,
+.plate-knife {
+  position: absolute;
+  width: 14px;
+  height: 36px;
+  color: var(--accent-deep);
+  opacity: 0.55;
+  top: 28px;
+}
+
+.plate-fork {
+  left: 4px;
+  animation: utensil-float 2.6s ease-in-out infinite;
+}
+
+.plate-knife {
+  right: 4px;
+  animation: utensil-float 2.6s ease-in-out infinite reverse;
+}
+
+.plate-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  animation: spark-pop 2.2s ease-in-out infinite;
+}
+
+.plate-spark.a {
+  top: 18px;
+  right: 22px;
+}
+.plate-spark.b {
+  bottom: 18px;
+  left: 20px;
+  animation-delay: 1.1s;
+}
+
+@keyframes plate-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes plate-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scaleY(0.6);
+  }
+  30% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scaleY(1.1);
+  }
+}
+
+@keyframes utensil-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes spark-pop {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  80% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
 }
 
 @keyframes spin {
@@ -1236,12 +1360,19 @@ body[data-view='menu'] .main.has-cart {
 }
 
 .menu-name-block {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
+}
+
+.menu-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .menu-title-input {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   margin: 0;
   padding: 0 0 2px;
   border: none;
@@ -1264,54 +1395,49 @@ body[data-view='menu'] .main.has-cart {
   color: var(--ink-faint);
 }
 
-.menu-name-hint {
-  margin: 6px 0 0;
-  font-size: 0.68rem;
-  color: var(--ink-faint);
-  letter-spacing: 0.02em;
+/* 定位图标按钮 */
+.btn-locate-ico {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(143, 145, 120, 0.3);
+  background: rgba(143, 145, 120, 0.1);
+  color: var(--accent-deep);
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
 }
 
-.menu-locate-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin: 0 0 12px;
+.btn-locate-ico:active:not(:disabled) {
+  background: rgba(143, 145, 120, 0.22);
 }
 
+.btn-locate-ico:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.btn-locate-ico svg {
+  display: block;
+}
+
+/* 地址单行省略；空态为说明文案 */
 .menu-address {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  font-size: 0.72rem;
-  line-height: 1.45;
+  margin: 8px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.35;
   color: var(--ink-dim);
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .menu-address.is-empty {
   color: var(--ink-faint);
-}
-
-.btn-locate {
-  flex-shrink: 0;
-  border: 1px solid rgba(143, 145, 120, 0.35);
-  background: rgba(143, 145, 120, 0.12);
-  color: var(--accent-deep);
-  font-family: var(--font);
-  font-size: 0.72rem;
-  font-weight: 500;
-  padding: 7px 12px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn-locate:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.btn-locate:active:not(:disabled) {
-  background: rgba(143, 145, 120, 0.22);
 }
 
 .history-actions {
@@ -1350,6 +1476,62 @@ body[data-view='menu'] .main.has-cart {
 
 .history-detail-addr.is-empty {
   color: var(--ink-faint);
+}
+
+/* 风格化确认框 */
+.confirm-modal {
+  z-index: 90;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+}
+
+.confirm-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  padding: 22px 20px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(44, 41, 36, 0.12);
+  z-index: 1;
+  animation: soft-rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.confirm-kicker {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  color: var(--accent-deep);
+  text-transform: uppercase;
+}
+
+.confirm-title {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.confirm-message {
+  margin: 0 0 20px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirm-actions .btn-ghost,
+.confirm-actions .btn-primary {
+  width: 100%;
+  min-height: 44px;
 }
 
 .menu-meta-row {
