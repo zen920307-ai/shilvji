@@ -25,15 +25,14 @@ jobs:
           cache: npm
       - name: Install & build
         env:
-          # 自定义域名 zenslab.top 使用根路径；无自定义域名时才用 /仓库名/
-          # 本仓库已配置 CNAME → zenslab.top，故固定为 /
+          # 自定义子域名 slj.zenslab.top 使用根路径 /
           BASE_PATH: /
         run: |
           npm ci
           npm run build
       - name: Ensure CNAME in dist
         run: |
-          echo "zenslab.top" > dist/CNAME
+          echo "slj.zenslab.top" > dist/CNAME
           cat dist/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
