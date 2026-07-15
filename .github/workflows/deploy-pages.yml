@@ -25,11 +25,16 @@ jobs:
           cache: npm
       - name: Install & build
         env:
-          # 仓库名：若 repo 叫 shilvji，Pages 路径为 /shilvji/
-          BASE_PATH: /${{ github.event.repository.name }}/
+          # 自定义域名 zenslab.top 使用根路径；无自定义域名时才用 /仓库名/
+          # 本仓库已配置 CNAME → zenslab.top，故固定为 /
+          BASE_PATH: /
         run: |
           npm ci
           npm run build
+      - name: Ensure CNAME in dist
+        run: |
+          echo "zenslab.top" > dist/CNAME
+          cat dist/CNAME
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
