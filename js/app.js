@@ -766,7 +766,7 @@ function resetMainScroll() {
   }
 }
 
-function paintView() {
+function paintView({ viewChanged = false } = {}) {
   main.onclick = null;
   document.body.dataset.view = state.view;
   main.classList.remove('page-leave', 'page-enter');
@@ -805,10 +805,12 @@ function paintView() {
       bindCapture();
   }
 
-  resetMainScroll();
-  // 进入动画
-  void main.offsetWidth;
-  main.classList.add('page-enter');
+  // 仅在真正换页时滚回顶部 + 入场动效
+  if (viewChanged) {
+    resetMainScroll();
+    void main.offsetWidth;
+    main.classList.add('page-enter');
+  }
   updateCartBar();
   requestAnimationFrame(syncBottomBars);
 }
@@ -829,13 +831,15 @@ function render() {
     window.setTimeout(() => {
       if (token !== _renderToken) return;
       _renderView = state.view;
-      paintView();
+      paintView({ viewChanged: true });
     }, 200);
     return;
   }
 
+  // 首次进入也算换页
+  const isFirst = _renderView === null;
   _renderView = state.view;
-  paintView();
+  paintView({ viewChanged: isFirst || viewChanged });
 }
 
 /** 相册专用 accept：尽量避开系统「拍照 / 文件」入口 */
