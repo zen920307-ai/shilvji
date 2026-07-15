@@ -477,15 +477,30 @@ function refreshDishCard(dishId) {
     render();
     return;
   }
-  // 就地替换，避免列表重入场动画闪动
-  const html = renderDishCard(dish);
-  const wrap = document.createElement('div');
-  wrap.innerHTML = html.trim();
-  const next = wrap.firstElementChild;
-  if (next) {
-    next.style.animation = 'none';
-    el.replaceWith(next);
+
+  // 只替换操作区，保留图片节点，避免加减时图片闪动
+  const inCart = state.cart[dish.id];
+  const foot = el.querySelector('.dish-foot');
+  if (!foot) {
+    render();
+    return;
   }
+  const priceBlock = foot.querySelector('.price-block');
+  // 移除旧操作控件（记下按钮或数量器）
+  foot.querySelectorAll('.qty-ctrl, .btn-add').forEach((n) => n.remove());
+  const actionHtml = inCart
+    ? `<div class="qty-ctrl">
+        <button type="button" data-qty-minus="${dish.id}">−</button>
+        <span>${inCart.qty}</span>
+        <button type="button" data-qty-plus="${dish.id}">+</button>
+      </div>`
+    : `<button type="button" class="btn-add" data-add="${dish.id}">记下</button>`;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = actionHtml.trim();
+  const actionEl = tmp.firstElementChild;
+  if (actionEl) foot.appendChild(actionEl);
+  // 价格区保持不动；若缺失则不处理
+  void priceBlock;
 }
 
 function checkout() {
@@ -769,7 +784,7 @@ function resetMainScroll() {
 function paintView({ viewChanged = false } = {}) {
   main.onclick = null;
   document.body.dataset.view = state.view;
-  main.classList.remove('page-leave', 'page-enter');
+  main.classList.remove('page-leave', 'page-enter', 'page-enter-soft');
 
   switch (state.view) {
     case 'capture':
@@ -805,11 +820,19 @@ function paintView({ viewChanged = false } = {}) {
       bindCapture();
   }
 
+  syncCaptureBar();
+
   // 仅在真正换页时滚回顶部 + 入场动效
   if (viewChanged) {
     resetMainScroll();
     void main.offsetWidth;
-    main.classList.add('page-enter');
+    // 按目标页给不同入场风格
+    const fancy =
+      state.view === 'loading' ||
+      state.view === 'menu' ||
+      state.view === 'receipt' ||
+      state.view === 'history';
+    main.classList.add(fancy ? 'page-enter' : 'page-enter-soft');
   }
   updateCartBar();
   requestAnimationFrame(syncBottomBars);
@@ -817,7 +840,7 @@ function paintView({ viewChanged = false } = {}) {
 
 /**
  * 渲染当前视图。
- * 视图切换时：淡出 → 换内容 → 滚顶 → 淡入
+ * 视图切换时：遮罩淡出 → 换内容 → 滚顶 → 滑入淡入
  * 同页重绘（如加减数量）不打断滚动、不加离场动画
  */
 function render() {
@@ -826,13 +849,15 @@ function render() {
   const hasContent = !!main && main.childNodes.length > 0;
 
   if (viewChanged && hasContent) {
-    main.classList.remove('page-enter');
+    main.classList.remove('page-enter', 'page-enter-soft');
     main.classList.add('page-leave');
+    document.body.classList.add('is-page-transitioning');
     window.setTimeout(() => {
       if (token !== _renderToken) return;
       _renderView = state.view;
       paintView({ viewChanged: true });
-    }, 200);
+      document.body.classList.remove('is-page-transitioning');
+    }, 240);
     return;
   }
 
@@ -964,16 +989,18 @@ function renderCapture() {
             </div>`
       }
     </section>
-
-    <div class="analyze-wrap">
-      <button type="button" class="btn-primary" id="btn-analyze" ${n ? '' : 'disabled'}>
-        <span class="btn-ico" aria-hidden="true">☰</span>
-        <span>开卷 · 读懂这页菜单</span>
-        <span class="btn-ico" aria-hidden="true">${ARROW_SVG}</span>
-      </button>
-      <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
-    </div>
   `;
+}
+
+function syncCaptureBar() {
+  const bar = document.getElementById('capture-bar');
+  const analyzeBtn = document.getElementById('btn-analyze');
+  if (!bar) return;
+  const show = state.view === 'capture';
+  bar.classList.toggle('hidden', !show);
+  if (analyzeBtn) {
+    analyzeBtn.disabled = !state.photos.length;
+  }
 }
 
 function bindCapture() {
@@ -1009,9 +1036,8 @@ function bindCapture() {
   document.querySelectorAll('[data-del]').forEach((btn) => {
     btn.addEventListener('click', () => removePhoto(btn.getAttribute('data-del')));
   });
-  document.getElementById('btn-analyze')?.addEventListener('click', startAnalyze);
-  document.getElementById('btn-demo')?.addEventListener('click', loadDemoMenu);
 
+  syncCaptureBar();
   requestAnimationFrame(syncBottomBars);
 }
 
@@ -1992,6 +2018,14 @@ bindDragToClose(
   document.querySelector('#modal-settings [data-drag-handle]'),
   closeSettings,
 );
+
+// 首页底栏按钮（在 main 外，只绑一次）
+document.getElementById('btn-analyze')?.addEventListener('click', () => {
+  startAnalyze();
+});
+document.getElementById('btn-demo')?.addEventListener('click', () => {
+  loadDemoMenu();
+});
 
 // —— Global bindings ——
 document.getElementById('btn-home')?.addEventListener('click', goHome);

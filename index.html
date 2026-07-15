@@ -57,8 +57,18 @@
 
       <main id="main" class="main"></main>
 
+      <!-- 首页底栏：必须在 main 外，避免页面动画 transform 破坏 fixed -->
+      <div id="capture-bar" class="analyze-wrap hidden">
+        <button type="button" class="btn-primary" id="btn-analyze" disabled>
+          <span class="btn-ico" aria-hidden="true">☰</span>
+          <span>开卷 · 读懂这页菜单</span>
+          <span class="btn-ico" aria-hidden="true">→</span>
+        </button>
+        <button type="button" class="btn-soft" id="btn-demo">先翻一册演示 · DEMO</button>
+      </div>
+
       <footer class="app-foot" id="app-foot">
-        <em>DESIGN BY ZEN</em> · 食旅集
+        <em>DESIGN BY ZEN</em> · 食旅集 <span class="app-ver">V1.0</span>
       </footer>
 
       <div id="cart-bar" class="cart-bar hidden" aria-live="polite">

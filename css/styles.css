@@ -109,37 +109,69 @@
   animation: fade-in 0.35s ease both;
 }
 
-/* 页面切换交互动效 */
+/* 页面切换交互动效（不用 transform 挂在 main 上，避免破坏内部 fixed） */
 .main {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.22s ease, filter 0.22s ease;
+  will-change: opacity, filter;
 }
 
 .main.page-leave {
   opacity: 0;
-  transform: translateY(10px);
+  filter: blur(5px) saturate(0.85);
   pointer-events: none;
 }
 
 .main.page-enter {
-  animation: page-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: page-enter 0.48s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.main.page-enter-soft {
+  animation: page-enter-soft 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes page-enter {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    clip-path: inset(8% 0 0 0);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes page-enter-soft {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
-    transform: none;
+    filter: none;
   }
+}
+
+/* 换页时顶栏轻微呼吸，增强「整页切换」感 */
+body.is-page-transitioning .app-chrome {
+  opacity: 0.72;
+  transition: opacity 0.22s ease;
+}
+.app-chrome {
+  transition: opacity 0.28s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .anim-fade-up,
   .anim-page,
   .dish-card,
-  .main.page-enter {
+  .main.page-enter,
+  .main.page-enter-soft {
     animation: none !important;
   }
   .main {
@@ -147,7 +179,7 @@
   }
   .main.page-leave {
     opacity: 0;
-    transform: none;
+    filter: none;
   }
 }
 
@@ -284,6 +316,13 @@ body {
 .app-foot em {
   font-style: normal;
   color: var(--accent-deep);
+}
+
+.app-ver {
+  margin-left: 0.35em;
+  opacity: 0.55;
+  letter-spacing: 0.08em;
+  font-weight: 500;
 }
 
 body[data-view='capture'] .app-foot,
@@ -951,7 +990,7 @@ body[data-view='menu'] .main.has-cart {
   border-radius: 50%;
 }
 
-/* Bottom analyze bar · 贴屏幕最底，向上微弱投影 */
+/* Bottom analyze bar · 贴屏幕最底（挂在 #app 下，不被 main 动画影响） */
 .analyze-wrap {
   position: fixed;
   left: 50%;
@@ -969,6 +1008,10 @@ body[data-view='menu'] .main.has-cart {
   background: var(--bg);
   border-top: 1px solid var(--line);
   box-shadow: 0 -6px 20px rgba(44, 41, 36, 0.07);
+}
+
+.analyze-wrap.hidden {
+  display: none !important;
 }
 
 /* 用同色块把底栏以下区域也刷成页面色，消除割裂 */
