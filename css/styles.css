@@ -109,11 +109,45 @@
   animation: fade-in 0.35s ease both;
 }
 
+/* 页面切换交互动效 */
+.main {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.main.page-leave {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+.main.page-enter {
+  animation: page-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .anim-fade-up,
   .anim-page,
-  .dish-card {
+  .dish-card,
+  .main.page-enter {
     animation: none !important;
+  }
+  .main {
+    transition: none !important;
+  }
+  .main.page-leave {
+    opacity: 0;
+    transform: none;
   }
 }
 
@@ -399,6 +433,7 @@ body[data-view='loading'] .app-foot {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  /* transition for page-leave is defined above */
 }
 
 /* 首页底栏浮层：仅留最小内容空隙，禁止大块留白 */

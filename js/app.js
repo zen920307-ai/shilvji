@@ -753,9 +753,24 @@ function syncChromeHeight() {
 }
 
 // —— Render ——
-function render() {
+let _renderView = null;
+let _renderToken = 0;
+
+/** 进入新页面时滚回顶部（避免从首页下滑后仍停在中间） */
+function resetMainScroll() {
+  if (main) main.scrollTop = 0;
+  try {
+    window.scrollTo(0, 0);
+  } catch {
+    /* ignore */
+  }
+}
+
+function paintView() {
   main.onclick = null;
   document.body.dataset.view = state.view;
+  main.classList.remove('page-leave', 'page-enter');
+
   switch (state.view) {
     case 'capture':
       main.innerHTML = renderCapture();
@@ -787,9 +802,40 @@ function render() {
       break;
     default:
       main.innerHTML = renderCapture();
+      bindCapture();
   }
+
+  resetMainScroll();
+  // 进入动画
+  void main.offsetWidth;
+  main.classList.add('page-enter');
   updateCartBar();
   requestAnimationFrame(syncBottomBars);
+}
+
+/**
+ * 渲染当前视图。
+ * 视图切换时：淡出 → 换内容 → 滚顶 → 淡入
+ * 同页重绘（如加减数量）不打断滚动、不加离场动画
+ */
+function render() {
+  const token = ++_renderToken;
+  const viewChanged = _renderView !== state.view;
+  const hasContent = !!main && main.childNodes.length > 0;
+
+  if (viewChanged && hasContent) {
+    main.classList.remove('page-enter');
+    main.classList.add('page-leave');
+    window.setTimeout(() => {
+      if (token !== _renderToken) return;
+      _renderView = state.view;
+      paintView();
+    }, 200);
+    return;
+  }
+
+  _renderView = state.view;
+  paintView();
 }
 
 /** 相册专用 accept：尽量避开系统「拍照 / 文件」入口 */
