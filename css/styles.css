@@ -995,7 +995,7 @@ body[data-view='menu'] .main.has-cart {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 14px;
+  bottom: 25px;
   width: calc(100% - 0px);
   max-width: 480px;
   z-index: 45;
@@ -1020,7 +1020,7 @@ body[data-view='menu'] .main.has-cart {
   left: 0;
   right: 0;
   top: 100%;
-  height: 14px;
+  height: 25px;
   background: var(--bg);
   pointer-events: none;
 }
@@ -2169,7 +2169,7 @@ body[data-view='menu'] .main.has-cart {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 14px;
+  bottom: 25px;
   width: 100%;
   max-width: 480px;
   z-index: 50;
@@ -2188,7 +2188,7 @@ body[data-view='menu'] .main.has-cart {
   left: 0;
   right: 0;
   top: 100%;
-  height: 14px;
+  height: 25px;
   background: var(--cart-bg);
   pointer-events: none;
 }
